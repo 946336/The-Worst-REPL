@@ -33,9 +33,9 @@ REPL does not take bare functions. Instead, it uses a thin wrapper class
 called `Command`.
 
 ```python
-    class Command:
-        def __init__(self, callable, name = "", usage = "", helptext = ""):
-            ...
+class Command:
+    def __init__(self, callable, name = "", usage = "", helptext = ""):
+        ...
 ```
 
 * `callable` is the function that you want REPL to invoke.
@@ -87,22 +87,22 @@ be more convenient for you to write your own loop than to attempt to embed
 application-specific logic into the limited callback space REPL provides.
 
 ```python
-    # class REPL:
-        def go(self):
-            try:
-                while not self.done:
-                    try:
-                        self.eval(input(self.prompt).strip("\n"))
-                    except common.REPLError as e:
-                        print(e)
-                    except TypeError as e: # Bad command invocation
-                        print(e)
-            except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
-                print()
-                return
-            except Exception as e: # Attempt to keep running
-                print(e)
-                self.go
+# class REPL:
+    def go(self):
+        try:
+            while not self.done:
+                try:
+                    self.eval(input(self.prompt).strip("\n"))
+                except common.REPLError as e:
+                    print(e)
+                except TypeError as e: # Bad command invocation
+                    print(e)
+        except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
+            print()
+            return
+        except Exception as e: # Attempt to keep running
+            print(e)
+            self.go
 ```
 
 In particular, if any task needs to be carried out between successive command
