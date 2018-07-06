@@ -76,8 +76,8 @@ initialization:
 
 While not prohibited, it is possible to leverage `REPL.eval()` and other
 related functions to indirectly execute arbitrary REPL without informing the
-user, this is not recommended. A responsible developer will find another way
-to accomplish the same task.
+user. This is not recommended, and a responsible developer will find another
+way to accomplish the same task.
 
 ## Advanced Usage
 
