@@ -1,6 +1,6 @@
 
 import os, sys
-import json
+import json, re
 import time
 from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
@@ -63,6 +63,7 @@ class REPL:
         self.__env = environment.Environment(self.name, upstream =
                 self.__config_env, default_value = "")
         self.__env.bind(self.__resultvar, "0")
+        self.__env.bind("0", self.__name)
 
         # REPL builtins
         self.__builtins = {
@@ -140,6 +141,10 @@ class REPL:
                 self.__config_env.load_from(f)
         except FileNotFoundError as e:
             pass
+        except json.decoder.JSONDecodeError as e:
+            if not str(e).endswith("(char 0)"): # ._.
+                print("Error reading config variables from {}"
+                        .format(self.__varfile))
 
         atexit.register(self.write_config)
 
@@ -195,10 +200,17 @@ class REPL:
         Evaluate a string as a repl command
         The returned result is bound to the name ?, and the output is returned
         """
+        string = string.lstrip()
         if len(string) == 0: return ""
         if string[0] == "#": return ""
 
-        bits = syntax.split_whitespace(string)
+        try:
+            bits = syntax.split_whitespace(string)
+        except common.REPLSyntaxError as e:
+            print("Syntax error: {}".format(e))
+            self.__env.bind(self.__resultvar, "2")
+            return ""
+
         bits = [bit.expand(self.__env) for bit in bits]
 
         bits = self.do_pipelines(bits)
@@ -234,7 +246,7 @@ class REPL:
                 result = command(*arguments)
                 self.__env.bind(self.__resultvar, str(result or 0))
         except TypeError as e:
-            print("(Error) Usage: {}".format(command.usage))
+            print("(Error) {}".format(command.usage))
             self.__env.bind(self.__resultvar, str(255))
 
         stdout = out.getvalue()
@@ -436,6 +448,10 @@ class REPL:
     def make_set_command(self):
 
         def set(name, value):
+            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                print("Invalid identifier name")
+                return 2
+
             self.set(name, value)
             return 0
 
@@ -449,6 +465,10 @@ class REPL:
     def make_unset_command(self):
 
         def unset(name):
+            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                print("Invalid identifier name")
+                return 2
+
             self.unset(name)
             return 0
 
@@ -520,13 +540,25 @@ class REPL:
                 if len(args) != 2:
                     print("Subcommand set expected name and value")
                     return 1
-                self.__config_env.bind(*args)
+
+                name, value = args
+                if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                    print("Invalid identifier name")
+                    return 2
+
+                self.__config_env.bind(name, value)
 
             elif subcommand == "unset":
                 if len(args) != 1:
                     print("Subcommand unset expected name")
                     return 1
-                self.__config_env.unbind(*args)
+
+                [name] = args
+                if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                    print("Invalid identifier name")
+                    return 2
+
+                self.__config_env.unbind(name)
 
             elif subcommand == "list":
                 if len(args) != 0:

@@ -15,8 +15,12 @@ page](how-repl-works.md).
 Most of REPL boils down to the following:
 
     command [arguments...]
+    # This is a comment
 
 REPL provides the following shell-like behavior:
+
+The backslash _is not_ used to escape special characters in REPL. Instead,
+special characters must be quoted to suppress their normal behavior.
 
 #### Variables
 
@@ -30,6 +34,19 @@ If a variable `hello` is set, `$hello` will expand to its value.
     (test) >>> set hello there
     (test) >>> echo $hello
     there
+    (test) >>> set there ", there"
+    (test) >>> echo hello${there}
+    hello, there
+
+Variable names must match the following regex: `[A-Za-z0-9_?][A-Z-a-z0-9_]*`
+
+**Note:** Special variables
+
+REPL has the following special variables:
+
+`$?`: This is the return value of the last executed command.
+
+`$0`: On startup, this is set to the name of the REPL instance.
 
 #### Parameter Substitution
 

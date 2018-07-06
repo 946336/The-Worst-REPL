@@ -1,6 +1,8 @@
 
 import re
 
+from .common import REPLSyntaxError
+
 class ExpandableString:
     def __init__(self, s = "", delimiter = "$"):
         self.__s = str(s)
@@ -30,12 +32,12 @@ class ExpandableString:
 
         """
         Identifiers match one of the following regexes:
-        $[A-Za-z_?][A-Za-z0-9_]*
-        ${[A-Za-z_?][A-Za-z0-9_]*}
+        $[A-Za-z_?0-9][A-Za-z0-9_]*
+        ${[A-Za-z_?0-9][A-Za-z0-9_]*}
         """
 
-        identifier = re.compile("([A-Za-z_?][A-Z-a-z0-9_]*)")
-        identifier2 = re.compile("{([A-Za-z_?][A-Za-z0-9_]*)}")
+        identifier = re.compile("([A-Za-z0-9_?][A-Z-a-z0-9_]*)")
+        identifier2 = re.compile("{([A-Za-z0-9_?][A-Za-z0-9_]*)}")
 
         for debris in exploded:
             if len(debris) == 0:
@@ -159,6 +161,9 @@ def merge_quotes(tokens):
 
         last = t
 
+    if acc is not None:
+        raise REPLSyntaxError("Unmatched quote")
+
     return tokens_
 
 def merge_strings(tokens):
@@ -227,6 +232,8 @@ def break_character(tokens, character):
         for bits in pieces:
             if bits == "": continue
             # If it was escaped, merge it back in and continue
+            # TODO - This doesn't work at all. We must side-effect the outer
+            # loop, not this one
             if (bits == character
                 and len(tokens_) > 0
                 and escapes_next(tokens_[-1])):
@@ -243,6 +250,19 @@ def break_character(tokens, character):
             else:
                 tokens_[-1] += bits
                 merge = False
+
+    return tokens_
+
+def discard_comments(tokens):
+    tokens_ = []
+
+    pieces = break_character(tokens, "#")
+
+    for bit in pieces:
+        if type(bit) == str and bit == "#":
+            break
+        else:
+            tokens_.append(bit)
 
     return tokens_
 
@@ -277,6 +297,13 @@ def split_whitespace(string):
     """
 
     tokens = merge_whitespace(tokens)
+
+    """
+    We remove unquoted comments here, discarding them and anything following
+    them
+    """
+
+    tokens = discard_comments(tokens)
 
     """
     Special character ` needs to be processed here. If there are any bare or

@@ -8,7 +8,7 @@ environments
 * Variable shadowing is _not_ the behavior
 """
 
-import sys
+import sys, json
 
 class Environment:
     def __init__(self, name = "(?)", upstream = None, default_value = ""):
@@ -74,32 +74,13 @@ class Environment:
         return self.get(name)
 
     def load_from(self, file_like):
-        line_nr = 0
-        for line in file_like:
-            line_nr += 1
-            if line.strip() == "": continue
-            if line.strip()[0] == "#": continue
-            if line.strip()[0] == "=":
-                print("Warning:{}:{}: Expected name before '='\n{}"
-                        .format(self.__varfile, line_nr, line))
-                continue
-
-            pieces = [bits.strip() for bits in line.split("=") if
-                    bits.strip() != ""]
-
-            if len(pieces) < 2:
-                pieces.append("")
-
-            value = pieces[-1]
-            for name in pieces[:-1]:
-                self.__bindings[name] = value
+        self.__bindings = json.load(file_like)
 
     def write_to(self, file_like):
-        for k, v in self.__bindings.items():
-            file_like.write("{} = {}\n".format(str(k), str(v)))
+        json.dump(self.__bindings, file_like, indent = 4, sort_keys = True)
 
     def list(self):
-        return [ "{} -> {}".format(k, v) for k, v in self.__bindings.items() ]
+        return [ "* {} -> {}".format(k, v) for k, v in self.__bindings.items() ]
 
     def list_tree(self):
         finger = self.__upstream
