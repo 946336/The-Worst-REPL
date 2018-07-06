@@ -2,6 +2,5 @@
 
 from repl import repl
 
-r = repl.REPL("test")
-r.go()
+repl.REPL("test").go()
 

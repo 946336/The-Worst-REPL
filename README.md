@@ -3,31 +3,47 @@
 The worst REPL you've ever seen.
 
 REPL provides a simple way to bind textual commands to python functions. If
-you need an interactive, shell-like interface, this might sort of work.
+you need an interactive, shell-like interface, this might work for you.
 
-Features:
+This is not an out-of-the-box solution, and it is certainly not intended to
+replace a full domain-specific language. In its current state, REPL is more of
+an interactive console than anything else.
 
-* Command [Arguments...]
-* $Variables
-* Subshell expansion
-* Persistent variables
-* Sourcing / scripting support
-* Startup state
-* Configurable dotfile name for startup
-* Dotfile overrides
-* A reasonable [empty] basis
-* Reasonable builtins
-* Some kind of help system
-* Backslash escapes
-* Quoting
-* Aliases and backslash escapes
+## What REPL _can_ do
 
-Stretch Goals:
+* Provide a simple way or users to interact with your application.
+* Allow users to invoke your functions without being required to read your
+  source code or write their own.
+* Give you flexibility in spot-checking and testing code, especially if you're
+  testing a backend application with no proper user interface.
 
-* Flow control: Loops
-* Flow control: Conditional statements
-* Flow control: Functions (Ooh, shiny...)
-* Useful prompt variables
-* Parameter expansion
-* Redirects and pipes
+## What REPL _cannot_ do
+
+* Replace a true embedded scripting language like Lua.
+* Replace a true shell like bash/fish/zhs/etc.
+* Replace an actual user interface.
+
+## Features:
+
+For more details, see the [documentation](doc/index.md).
+
+* Shell-like syntax that will be mostly familiar to users who have experience
+  in POSIX shells
+* Built-in supoport for a persistent plaintext variable store
+* Primitive tab completion for top-level commands
+* Built-in help system
+* Customizable prompt
+
+## Using REPL
+
+If you are looking to use REPL for your own project, you will want to read
+[this](doc/using-repl-code.md).
+
+## Dependencies
+
+REPL depends on the python standard library and readline
+
+## License
+
+REPL is using the MIT license.
 

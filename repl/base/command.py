@@ -26,11 +26,19 @@ class Command:
 
     @property
     def usage(self):
-        return self.__usage
+        return "Usage: " + self.__usage
+
+    @usage.setter
+    def set_usage(self, usage):
+        self.__usage = usage
 
     @property
     def help(self):
         return self.usage + ("\n" + self.__helptext if self.__helptext else "")
+
+    @help.setter
+    def set_help(self, helptext):
+        self.__helptext = helptext
 
 # ===============================================================
 # Default, repl-independent commands

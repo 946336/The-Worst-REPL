@@ -6,6 +6,7 @@ from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
 import itertools
 from textwrap import dedent
+from pathlib import Path
 
 # Oof
 import readline
@@ -33,33 +34,18 @@ class REPL:
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
 
-    def __init__(self, application_name = "repl", prompt = lambda: ">>> ",
-            upstream_environment = None):
-        """
-        Set up a repl environment that is usable without any further
-        massaging, though it won't be particularly useful without any real
-        commands!
-
-        application_name : str
-            Used to determine what the dotfile is called. For example, an
-            application_name of "shell" will cause REPL to use .shellrc as its
-            dotfile
-            Defaults to "repl"
-
-        prompt: callable
-            This callable object must be invokable with no arguments.
-            This should be a callable object that returns a string suitable
-            for use as a prompt. In the future, REPL will provide the
-            capability to expand some patterns in a manner analogous to the
-            way bash does prompts
-            Defaults to lambda: ">>> " unless a new name is given, in which
-            case it defaults to lambda: "({}) >>> ".format(name)
-        """
-
+    def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
+            upstream_environment = None, dotfile_prefix = None,
+            dotfile_root = None, history_length = 1000):
         self.__name = application_name
+
+        self.__dotfile_prefix = dotfile_prefix or self.__name
+        self.__dotfile_root = (os.getcwd() if dotfile_root is None else
+                dotfile_root)
+
         self.__prompt = (prompt
                 if application_name == "repl"
-                else lambda: "({}) >>> ".format(self.__name))
+                else lambda _: "({}) >>> ".format(self.__name))
 
         self.__done = False
         self.__true_stdin = sys.stdin
@@ -70,7 +56,8 @@ class REPL:
         self.__config_env = environment.Environment(self.name + "-env",
                 upstream = upstream_environment, default_value = "")
 
-        self.__varfile = self.configs_file_pattern.format(self.name)
+        self.__varfile = os.path.join(self.__dotfile_root,
+                self.configs_file_pattern.format(self.__dotfile_prefix))
         self.load_config_vars()
 
         self.__env = environment.Environment(self.name, upstream =
@@ -80,35 +67,33 @@ class REPL:
         # REPL builtins
         self.__builtins = {
                 # name : command.Command
-
         }
         self.setup_builtins()
 
-        # Basis commands, if necessary
+        # Basis commands, if you have a need for them
         self.__basis = {
                 # name : command.Command
         }
         self.setup_basis()
 
-        # This is going to _suck_, but it's also one of the most optional out
-        # of all of the planned features
+        # Populated by self.register(command)
         self.__functions = {
                 # name : command.Command
         }
 
-        # None exist by default, but you may add some here if you so desire
+        # Populated by the `alias` builtin
         self.__aliases = {
                 # name : command.Command
         }
 
         # Readline and history setup
-        self.__histfile = self.history_file_pattern.format(self.name)
+        self.__histfile = os.path.join(self.__dotfile_root,
+            self.history_file_pattern.format(self.__dotfile_prefix))
         atexit.register(readline.write_history_file, self.__histfile)
 
         try:
             readline.read_history_file(self.__histfile)
-            # This is a magic number >:(
-            readline.set_history_length(1000)
+            readline.set_history_length(history_length)
         except FileNotFoundError as e:
             pass
 
@@ -116,7 +101,11 @@ class REPL:
         readline.set_completer(self.completion)
 
         # Source startup file
-        self.source(self.startup_file_pattern.format(self.name), quiet = True)
+        self.__source_depth = 0
+        self.__max_source_depth = 500
+        self.source(os.path.join(self.__dotfile_root,
+            self.startup_file_pattern.format(self.__dotfile_prefix)),
+                quiet = True)
 
     def __add_builtin(self, command):
         self.__builtins[command.name] = command
@@ -124,6 +113,7 @@ class REPL:
     def setup_builtins(self):
         self.__add_builtin(command.echo)
         self.__add_builtin(self.make_alias_command())
+        self.__add_builtin(self.make_unalias_command())
         self.__add_builtin(self.make_help_command())
         self.__add_builtin(self.make_set_command())
         self.__add_builtin(self.make_unset_command())
@@ -135,6 +125,7 @@ class REPL:
         self.__add_builtin(self.make_env_command())
         self.__add_builtin(self.make_slice_command())
         self.__add_builtin(self.make_sleep_command())
+        self.__add_builtin(self.make_list_command())
 
     def __add_basis(self, command):
         self.__basis[command.name] = command
@@ -175,8 +166,16 @@ class REPL:
 
         return possibilities[state]
 
-    def register(self, command):
-        self.__functions[command.name] = command
+    def register(self, command_):
+        if isinstance(command_, command.Command):
+            raise TypeError("Can only register objects of type command.Command")
+        self.__functions[command_.name] = command_
+
+    def unregister(self, name):
+        try:
+            del self.__functions[name]
+        except KeyError as e:
+            pass
 
     def set_prompt(self, prompt_callable):
         self.__prompt = prompt_callable
@@ -314,6 +313,12 @@ class REPL:
         return make_unknown_command(name)
 
     def source(self, filename, quiet = False):
+        self.__source_depth += 1
+        if self.__source_depth > self.__max_source_depth:
+            sys.stderr.write("source: maximum depth exceeded ({})".format(
+                self.__max_source_depth))
+            return 1
+
         try:
             with open(filename, "r") as f:
                 for line in f:
@@ -321,7 +326,9 @@ class REPL:
         except FileNotFoundError as e:
             if not quiet:
                 print("source: File not found ({})".format(filename))
+            self.__source_depth -= 1
             return 1
+        self.__source_depth -= 1
         return 0
 
     @property
@@ -334,7 +341,19 @@ class REPL:
 
     @property
     def prompt(self):
-        return self.__prompt()
+        try:
+            return self.__prompt(self)
+        except TypeError:
+            return "({}/Prompt error) >>> ".format(self.__name)
+
+    def set(self, name, value):
+        self.__env.bind(name, str(value))
+
+    def get(self, name):
+        return self.__env.get(name)
+
+    def unset(self, name):
+        self.__env.unbind(name)
 
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module
@@ -342,7 +361,7 @@ class REPL:
     # this somewhere and hack on it there.
     def go(self):
         """
-        Convenience method provided in case you just want to let the repl run
+        Convenience method provided in case you just want to let the REPL run
         and do its thing without passing control back and forth
         """
         try:
@@ -351,12 +370,14 @@ class REPL:
                     self.eval(input(self.prompt).strip("\n"))
                 except common.REPLError as e:
                     print(e)
-        except KeyboardInterrupt as e:
-            # Exit gracefully
+                except TypeError as e:
+                    print(e)
+        except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
-        except EOFError as e:
-            # Exit gracefully
-            print()
+            return
+        except Exception as e: # Really?
+            print(e)
+            self.go
 
 # ========================================================================
 # REPL commands
@@ -374,6 +395,23 @@ class REPL:
                 "alias",
                 "alias newname name",
                 "Introduce new-name as an alias for name",
+        )
+
+    def make_unalias_command(self):
+
+        def unalias(name):
+            try:
+                del self.__aliases[name]
+            except KeyError:
+                print("{} is not an alias".format(name))
+                return 1
+            return 0
+
+        return command.Command(
+                unalias,
+                "unalias",
+                "unalias name",
+                "Remove an alias"
         )
 
     def make_help_command(self):
@@ -398,7 +436,7 @@ class REPL:
     def make_set_command(self):
 
         def set(name, value):
-            self.__env.bind(name, value)
+            self.set(name, value)
             return 0
 
         return command.Command(
@@ -411,7 +449,7 @@ class REPL:
     def make_unset_command(self):
 
         def unset(name):
-            self.__env.unbind(name)
+            self.unset(name)
             return 0
 
         return command.Command(
@@ -533,8 +571,8 @@ class REPL:
                 "env [all]",
                 dedent("""
                 Show all non-config variables.
-                    If all is given, list everything, including but not limited to
-                    config variables""".lstrip("\n"))
+                    If all is given, list everything, including but not
+                    limited to config variables""".lstrip("\n"))
         )
 
     def make_slice_command(self):
@@ -569,7 +607,7 @@ class REPL:
             try:
                 time.sleep(int(seconds))
             except TypeError:
-                print("sleep expects and integer number of seconds")
+                print("sleep expects an integer number of seconds")
                 return 2
 
             return 0
@@ -579,5 +617,46 @@ class REPL:
                 "sleep",
                 "sleep seconds",
                 "Wait a number of seconds"
+        )
+
+    def make_list_command(self):
+
+        def list(category):
+            if category == "builtins":
+                print("\n".join(self.__builtins.keys()))
+                return 0
+            elif category == "basis":
+                print("\n".join(self.__basis.keys()))
+                return 0
+            elif category == "functions":
+                print("\n".join(self.__functions.keys()))
+                return 0
+            elif category == "aliases":
+                print("\n".join(self.__aliases.keys()))
+                return 0
+            elif category == "all":
+                builtins = ("\n".join(self.__builtins.keys()))
+                basis = ("\n".join(self.__basis.keys()))
+                functions = ("\n".join(self.__functions.keys()))
+                aliases = ("\n".join(self.__aliases.keys()))
+
+                if builtins: print(builtins)
+                if basis: print(basis)
+                if functions: print(functions)
+                if aliases: print(aliases)
+
+                return 0
+            else:
+                print("Valid categories are builtins, basis, functions, "
+                        + "aliases, and all")
+                return 2
+
+        return command.Command(
+                list,
+                "list",
+                "list {builtins, basis, functions, aliases, all}",
+                dedent("""
+                    List available commands in one or all categories
+                    """).strip("\n")
         )
 

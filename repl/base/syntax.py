@@ -1,9 +1,6 @@
 
 import re
 
-# This defines functions that help parse repl commands. This is a hard
-# problem, apparently, because it makes me very sad.
-
 class ExpandableString:
     def __init__(self, s = "", delimiter = "$"):
         self.__s = str(s)
@@ -32,10 +29,9 @@ class ExpandableString:
         if len(exploded) == 0: return s
 
         """
-        Need to rigorously define what an identifier looks like.
+        Identifiers match one of the following regexes:
         $[A-Za-z_?][A-Za-z0-9_]*
         ${[A-Za-z_?][A-Za-z0-9_]*}
-        ^ Actually, aren't those regexes enough?
         """
 
         identifier = re.compile("([A-Za-z_?][A-Z-a-z0-9_]*)")
@@ -303,23 +299,4 @@ def split_whitespace(string):
 
     return [ExpandableString(token) if type(token) is not NonExpandableString
             else token for token in tokens ]
-
-# What was the purpose of this function?
-def split(string, delimiters):
-    """
-    Split a string on whitespace and other delimiters. Unquoted whitespace is
-    not included in the list of tokens, but delimiters are. This function is
-    not keyword aware
-    """
-    tokens = []
-
-    # Split on whitespace, respecting quoting
-    tokens = split_whitespace(string)
-
-    for token in _tokens:
-        # If we find a delimiter, we need to split the token further. However,
-        # this is a stateful operation.
-        pass
-
-    return tokens
 
