@@ -51,9 +51,9 @@ you think they do.
 * unset
 * list
 
-    (test) >>> config set name value
-    (test) >>> config unset name
-    (test) >>> config list
+        (test) >>> config set name value
+        (test) >>> config unset name
+        (test) >>> config list
 
 #### Sourcing
 
@@ -94,7 +94,8 @@ The default name resolution order for commands is `aliases`, `functions`,
 (\\) reverses REPL's lookup order for that command, potentially allowing you
 to access a command that has been shadowed.
 
-    (test) >>> alias echo help
+    (test) >>> echo list
+    list
     (test) >>> alias echo help
     (test) >>> echo list
     Usage: list {builtins, basis, functions, aliases, all}
@@ -106,7 +107,7 @@ to access a command that has been shadowed.
 
 REPL supports pipelining standard output with the pipe character (|)
 
-    (test) (test) >>> echo hello | cat | cat | cat
+    (test) >>> echo hello | cat | cat | cat
     hello
 
 **Note**
@@ -135,9 +136,12 @@ taking place.
     (test) >>> echo 'echo `echo hello` | cat'
     echo `echo hello` | cat
 
-* Startup state
-* Configurable dotfile name for startup
-* A reasonable [empty] basis
+#### Configurable dotfile name for startup
+
+REPL uses dotfiles for startup configuration. Which dotfile is used depends on
+the name given to the REPL. For example, if the REPL is given the name "test",
+the file `.replrc` will be used as the dotfile. Dotfiles are sourced before
+control is returned to the user.
 
 ## Builtins
 

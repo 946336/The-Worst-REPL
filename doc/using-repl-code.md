@@ -32,11 +32,11 @@ until it terminates.
 REPL does not take bare functions. Instead, it uses a thin wrapper class
 called `Command`.
 
-    ```python
+```python
     class Command:
         def __init__(self, callable, name = "", usage = "", helptext = ""):
             ...
-    ```
+```
 
 * `callable` is the function that you want REPL to invoke.
 * `name` is the name of the function and the name used to invoke the function.
@@ -86,7 +86,7 @@ reproduced below may not be sufficient or appropriate. In such cases, it may
 be more convenient for you to write your own loop than to attempt to embed
 application-specific logic into the limited callback space REPL provides.
 
-    ```python
+```python
     # class REPL:
         def go(self):
             try:
@@ -103,7 +103,7 @@ application-specific logic into the limited callback space REPL provides.
             except Exception as e: # Attempt to keep running
                 print(e)
                 self.go
-    ```
+```
 
 In particular, if any task needs to be carried out between successive command
 invocations, that is a strong case to forgo the provided main loop and to roll
