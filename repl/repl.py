@@ -142,6 +142,12 @@ class REPL:
         self.__add_basis(repl_math.make_addition_command())
         return self
 
+    def __add_alias(self, oldname, newname):
+        c = self.lookup_command(oldname)
+        if c.name != make_unknown_command("").name:
+            self.__aliases[newname] = c
+        return self
+
     def load_config_vars(self):
         try:
             with open(self.__varfile, "r") as f:
@@ -424,6 +430,16 @@ class REPL:
             print(type(e), ": ", e)
             self.go()
 
+        return self
+
+# ========================================================================
+# Optional things - explicitly enable some features
+# ========================================================================
+
+    def enable_shell(self):
+        s = command.make_shell_command()
+        self.__add_builtin(s)
+        self.__add_alias(s.name, "!")
         return self
 
 # ========================================================================

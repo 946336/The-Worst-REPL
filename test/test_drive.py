@@ -2,5 +2,5 @@
 
 from repl import repl
 
-repl.REPL("test").go()
+repl.REPL("test").enable_shell().go()
 
