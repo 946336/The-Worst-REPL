@@ -49,6 +49,7 @@ class REPL:
 
         self.__done = False
         self.__true_stdin = sys.stdin
+        self.__true_stdout = sys.stdout
 
         self.__escapechar = "\\"
         self.__resultvar = "?"
@@ -255,6 +256,13 @@ class REPL:
             return ""
 
         out = StringIO()
+        # TODO
+        # We can probably change how this all works. Instead of capturing
+        # stdout and holding it hostage, we might be able to just skim a copy
+        # instead, and only suppress it when a pipeline happens. This'll
+        # require some rejiggering of eval, execute, and do_pipelines, but it
+        # should net us a lot of usability, and potentially make cat less
+        # pointless.
 
         try:
             with redirect_stdout(out):

@@ -2,6 +2,8 @@
 
 The worst REPL you've ever seen.
 
+REPL is a simple framework for building simple interactive applications.
+
 REPL provides a simple way to bind textual commands to python functions. If
 you need an interactive, shell-like interface, this might work for you.
 
@@ -20,7 +22,7 @@ an interactive console than anything else.
 ## What REPL _cannot_ do
 
 * Replace a true embedded scripting language like Lua.
-* Replace a true shell like bash/fish/zhs/etc.
+* Replace a true shell like bash/fish/zsh/etc.
 * Replace an actual user interface.
 
 ## Features:
@@ -45,5 +47,5 @@ REPL depends on the python standard library and readline
 
 ## License
 
-REPL is using the MIT license.
+REPL is released under the MIT license.
 
