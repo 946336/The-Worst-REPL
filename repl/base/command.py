@@ -12,7 +12,7 @@ class Command:
         # This is nasty with lambda functions
         self.__name = name if name else callable.__name__
 
-        # If no helptext, use docstring from function?
+        # If no helptext, use docstring from function
         self.__helptext = helptext if helptext else inspect.getdoc(callable)
 
         self.__usage = usage if usage else inspect.signature(callable)

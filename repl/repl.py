@@ -3,10 +3,9 @@ import os, sys
 import json, re
 import time
 from io import StringIO
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stdout
 import itertools
 from textwrap import dedent
-from pathlib import Path
 
 # Oof
 import readline

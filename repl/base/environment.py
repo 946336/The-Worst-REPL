@@ -8,7 +8,7 @@ environments
 * Variable shadowing is _not_ the behavior
 """
 
-import sys, json
+import json
 
 class Environment:
     def __init__(self, name = "(?)", upstream = None, default_value = ""):
