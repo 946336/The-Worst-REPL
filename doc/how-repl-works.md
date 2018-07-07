@@ -6,5 +6,5 @@
 
 -----------------------
 
-Coming soon, or maybe not soon at all.
+Coming soon, or maybe not very soon at all.
 

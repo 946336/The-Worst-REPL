@@ -124,6 +124,7 @@ class REPL:
             self.startup_file_pattern.format(self.__dotfile_prefix)),
                 quiet = True)
 
+        # Why must container type default arguments be like this
         enabled_features = []
 
     def __add_builtin(self, command):
@@ -220,17 +221,14 @@ class REPL:
         self.__prompt = prompt_callable
         return self
 
-    # Oh boy
-    # We have to figure out output redirection in this context, because this
-    # is the context in which output redirection happens
     def eval(self, string):
         """
-        Unless the command is escaped, lookup order is:
+        Unless the command is backslashed, lookup order is:
             * aliases
             * functions
             * basis
             * builtins
-        If the command is escaped, then the lookup order is reversed
+        If the command is backslashed, then the lookup order is reversed
 
         Evaluate a string as a repl command
         The returned result is bound to the name ?, and the output is returned
@@ -312,9 +310,7 @@ class REPL:
                 command = self.expand_subshells(command)
 
                 out = StringIO()
-                # with redirect_stdout(out):
                 self.execute(command[0], command[1:], out)
-                    # print(output, end = "")
 
                 stdin = out
 

@@ -181,6 +181,7 @@ REPL provides the following builtins by default:
     source
     sleep
     verbose
+    modules
 
 Of note are `quit` and `exit`, which don't force the REPL to exit, but rather
 set a boolean flag in the REPL object to indicate that the user has decided to
@@ -189,6 +190,14 @@ stop the REPL.
 REPL's `cat` is not useful, and is strictly less powerful than POSIX `cat`.
 REPL `cat` will _only_ copy standard input to standard output, and does not
 take any arguments.
+
+## Modules
+
+The developer of a REPL application may choose to enable any number of modules
+that are provided by REPL but not enabled by default. You can see a list of
+enabled modules using the `modules` command.
+
+[Module Documentation](repl-modules.md)
 
 ## Stretch Goals:
 

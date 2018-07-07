@@ -64,6 +64,7 @@ following:
 * Whether or not the REPL has been instructed to stop: `REPL.done`
 * The state of variables in the REPL environment: `REPL.get()`
 * Whether or not REPL will echo executed commands: `REPL.echo`
+* The names of enabled modules
 
 REPL also allows you to make the following types of changes after
 initialization:
@@ -81,6 +82,20 @@ While not prohibited, it is possible to leverage `REPL.eval()` and other
 related functions to indirectly execute arbitrary REPL without informing the
 user. This is not recommended, and a responsible developer will find another
 way to accomplish the same task.
+
+## Modules
+
+REPL comes with a few different modules containing various commands that may
+be useful but that are likely to be unwanted in many situations. You may
+explicitly enable these modules at initialization time using the
+`modules_enabled` parameter to `REPL.__init__()`. `modules_enabled` should be
+a list of strings, each of which should be the name of a module.
+
+End users may see what modules are enabled with the `modules` command.
+
+Current modules are:
+
+* shell
 
 ## Advanced Usage
 
