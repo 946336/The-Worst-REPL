@@ -36,8 +36,9 @@ class REPL:
 
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
-            dotfile_root = None, history_length = 1000):
+            dotfile_root = None, history_length = 1000, echo = False):
         self.__name = application_name
+        self.__echo = echo
 
         self.__dotfile_prefix = dotfile_prefix or self.__name
         self.__dotfile_root = (os.getcwd() if dotfile_root is None else
@@ -234,6 +235,11 @@ class REPL:
         return stdout
 
     def execute(self, command, arguments):
+        if self.__echo:
+            print("+ {} {}".format(command, " ".join(
+                [argument.quote() for argument in arguments]
+            )))
+
         command = self.lookup_command(command)
 
         if command is None:
@@ -342,6 +348,13 @@ class REPL:
             return 1
         self.__source_depth -= 1
         return 0
+
+    @property
+    def echo(self):
+        return self.__echo
+
+    def set_echo(self, echo):
+        self.__echo = bool(echo)
 
     @property
     def done(self):

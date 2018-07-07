@@ -63,6 +63,7 @@ following:
 * The result of invoking the prompt callback: `REPL.prompt`
 * Whether or not the REPL has been instructed to stop: `REPL.done`
 * The state of variables in the REPL environment: `REPL.get()`
+* Whether or not REPL will echo executed commands: `REPL.echo`
 
 REPL also allows you to make the following types of changes after
 initialization:
@@ -73,6 +74,8 @@ initialization:
 * You may register a new command: `REPL.register()`
 * You may remove a function: `REPL.unregister()`
 * You may source scripts: `REPL.source()`
+* You may toggle whether or not REPL will echo the commands it executes:
+  `REPL.set_echo()`
 
 While not prohibited, it is possible to leverage `REPL.eval()` and other
 related functions to indirectly execute arbitrary REPL without informing the
