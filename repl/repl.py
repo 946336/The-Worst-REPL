@@ -160,7 +160,7 @@ class REPL:
         self.__add_basis(repl_math.make_addition_command())
         return self
 
-    def __add_alias(self, oldname, newname):
+    def __add_alias(self, newname, oldname):
         c = self.lookup_command(oldname)
         if c.name != make_unknown_command("").name:
             self.__aliases[newname] = c
@@ -466,7 +466,7 @@ class REPL:
     def __enable_shell(self):
         s = shell.make_shell_command()
         self.__add_builtin(s)
-        self.__add_alias(s.name, "!")
+        self.__add_alias("!", s.name)
 
 # ========================================================================
 # REPL commands
@@ -476,7 +476,7 @@ class REPL:
         # This seems unsafe, because you can probably get into some pretty bad
         # circular situations
         def alias(new_name, name):
-            self.__aliases[new_name] = self.lookup_command(name)
+            self.__add_alias(new_name, name)
             return 0
 
         return command.Command(
