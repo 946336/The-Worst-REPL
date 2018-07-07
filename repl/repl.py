@@ -12,6 +12,7 @@ import readline
 import atexit
 
 from .base import environment, command, syntax, common
+from .base import sink, repl_math
 
 DEBUG = True
 
@@ -138,7 +139,7 @@ class REPL:
 
     # No basis by default. Provide your own if you so desire
     def setup_basis(self):
-        pass
+        self.__add_basis(repl_math.make_addition_command())
         return self
 
     def load_config_vars(self):
@@ -224,8 +225,8 @@ class REPL:
 
         bits = [bit.expand(self.__env) for bit in bits]
 
-        bits = self.do_pipelines(bits)
         bits = self.expand_subshells(bits)
+        bits = self.do_pipelines(bits)
 
         if len(bits) == 0:
             return ""
@@ -236,33 +237,30 @@ class REPL:
         elif len(bits) > 1:
             command, arguments = bits[0], bits[1:]
 
-        stdout = self.execute(command, arguments)
+        stdout = self.execute(command, arguments, self.__true_stdout)
 
-        print(stdout, end="")
+        # print(stdout, end="")
 
         if type(sys.stdin) == StringIO: sys.stdin.close()
         sys.stdin = self.__true_stdin
         return stdout
 
-    def execute(self, command, arguments):
+    def execute(self, command, arguments, output_redirect = None):
         if self.__echo:
             quoted = [syntax.quote(argument) for argument in arguments if
                     argument]
-            print("+ {} {}".format(command, " ".join(quoted)))
+            self.__true_stdout.write("+ {} {}\n".format(command,
+                " ".join(quoted)))
+            self.__true_stdout.flush()
 
         command = self.lookup_command(command)
 
         if command is None:
             return ""
 
-        out = StringIO()
-        # TODO
-        # We can probably change how this all works. Instead of capturing
-        # stdout and holding it hostage, we might be able to just skim a copy
-        # instead, and only suppress it when a pipeline happens. This'll
-        # require some rejiggering of eval, execute, and do_pipelines, but it
-        # should net us a lot of usability, and potentially make cat less
-        # pointless.
+        out = sink.Wiretap()
+        if output_redirect:
+            out.join(output_redirect)
 
         try:
             with redirect_stdout(out):
@@ -288,18 +286,19 @@ class REPL:
             stdin = self.__true_stdin
             out = None
             for command in piped:
+                command = self.expand_subshells(command)
 
                 out = StringIO()
-                with redirect_stdout(out):
-                    output = self.execute(command[0], command[1:])
-                    print(output, end = "")
+                # with redirect_stdout(out):
+                self.execute(command[0], command[1:], out)
+                    # print(output, end = "")
 
                 stdin = out
 
                 sys.stdin = stdin
                 sys.stdin.seek(0)
 
-        return piped[-1]
+        return bits
 
     def expand_subshells(self, bits):
         # Handling subshell expansion
@@ -314,6 +313,7 @@ class REPL:
             if bit == "`":
                 if subshell: # Closing a subshell command
                     if len(accumulator) > 0:
+                        accumulator = self.do_pipelines(accumulator)
                         fresh_bits.append(self.execute(accumulator[0],
                             accumulator[1:]).rstrip("\n"))
                     accumulator = []

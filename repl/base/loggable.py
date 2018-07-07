@@ -54,36 +54,38 @@ class AdHoc:
         """
         self.__sink = sink
         self.__level = loglevel
-        self.__name = "{}/".format(name) if name else ""
+        self.__name = ("{}/".format(name)) if name else ""
 
         self.__prefixes = {
-                "info": "[{}INFO]: ".format(self.__name),
-                "debug": "[{}DEBUG]: ".format(self.__name),
-                "warning": "[{}WARNING]: ".format(self.__name),
-                "error": "[{}ERROR]: ".format(self.__name),
-                "critical": "[{}CRITICAL]: ".format(self.__name),
+                logging.INFO: "[{}INFO]: ".format(self.__name),
+                logging.DEBUG: "[{}DEBUG]: ".format(self.__name),
+                logging.WARNING: "[{}WARNING]: ".format(self.__name),
+                logging.ERROR: "[{}ERROR]: ".format(self.__name),
+                logging.CRITICAL: "[{}CRITICAL]: ".format(self.__name),
         }
         self.__prefixes.update(kwargs)
 
-    def __log(self, message, level):
-        message = str(message)
+    # This must be public to allow clients to access custom logging levels
+    def log(self, message, level):
+        message = self.__prefixe[level] + str(message)
         if self.__level <= level:
             self.__sink.write(message + "\n")
+            self.__sink.flush()
 
     def info(self, message):
-        self.__log(self.__prefixes["info"] + str(message), logging.INFO)
+        self.__log(str(message), logging.INFO)
 
     def debug(self, message):
-        self.__log(self.__prefixes["debug"] + str(message), logging.DEBUG)
+        self.__log(str(message), logging.DEBUG)
 
     def warn(self, message):
-        self.__log(self.__prefixes["warn"] + str(message), logging.WARNING)
+        self.__log(str(message), logging.WARNING)
 
     def error(self, message):
-        self.__log(self.__prefixes["error"] + str(message), logging.ERROR)
+        self.__log(str(message), logging.ERROR)
 
     def critical(self, message):
-        self.__log(self.__prefixes["critical"] + str(message), logging.CRITICAL)
+        self.__log(str(message), logging.CRITICAL)
 
 import sys
 StdErr = AdHoc(sys.stderr, name = "stderr")

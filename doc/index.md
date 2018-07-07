@@ -188,9 +188,7 @@ stop the REPL.
 
 REPL's `cat` is not useful, and is strictly less powerful than POSIX `cat`.
 REPL `cat` will _only_ copy standard input to standard output, and does not
-take any arguments. Due to an implementation detail regarding the handling of
-standard output, `cat` also does not produce any output until end of input is
-signalled.
+take any arguments.
 
 ## Stretch Goals:
 
