@@ -5,7 +5,6 @@ Environments
 * Bind names to values, allowing lookup and modification by trampling
 * Chain off of one another, allowing lookups and assignments to other
 environments
-* Variable shadowing is _not_ the behavior
 """
 
 import json
@@ -19,7 +18,8 @@ class Environment:
         self.__default = default_value
 
         if type(upstream) not in [type(None), Environment]:
-            raise RuntimeError("Upstream environment must be None or an environment")
+            raise RuntimeError("Upstream environment must be None or an " +
+                    "environment")
         self.__upstream = upstream
 
     # Bindings search up as far as possible for something to trample, but
