@@ -41,7 +41,7 @@ class ExpandableString:
 
         for debris in exploded:
             if len(debris) == 0:
-                tokens.append(debris)
+                tokens.append("$")
                 continue
 
             match = identifier.match(debris)
@@ -109,6 +109,16 @@ class NonExpandableString:
 
     def __eq__(self, rhs):
         return self.__s == rhs
+
+def quote(string):
+    try:
+        return string.quote()
+    except AttributeError as e:
+        string = re.sub("(['\"])", r"\\\1", string)
+        if any((c in string) for c in [" ", "#", "|"]):
+            return '"{}"'.format(string)
+        else:
+            return string
 
 def is_string_type(s):
     t = type(s)

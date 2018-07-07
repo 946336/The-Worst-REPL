@@ -180,6 +180,7 @@ REPL provides the following builtins by default:
     quit
     source
     sleep
+    verbose
 
 Of note are `quit` and `exit`, which don't force the REPL to exit, but rather
 set a boolean flag in the REPL object to indicate that the user has decided to

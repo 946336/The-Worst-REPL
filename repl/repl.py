@@ -111,6 +111,7 @@ class REPL:
 
     def __add_builtin(self, command):
         self.__builtins[command.name] = command
+        return self
 
     def setup_builtins(self):
         self.__add_builtin(command.echo)
@@ -128,13 +129,17 @@ class REPL:
         self.__add_builtin(self.make_slice_command())
         self.__add_builtin(self.make_sleep_command())
         self.__add_builtin(self.make_list_command())
+        self.__add_builtin(self.make_verbose_command())
+        return self
 
     def __add_basis(self, command):
         self.__basis[command.name] = command
+        return self
 
     # No basis by default. Provide your own if you so desire
     def setup_basis(self):
         pass
+        return self
 
     def load_config_vars(self):
         try:
@@ -148,10 +153,12 @@ class REPL:
                         .format(self.__varfile))
 
         atexit.register(self.write_config)
+        return self
 
     def write_config(self):
         with open(self.__varfile, "w") as f:
             self.__config_env.write_to(f)
+        return self
 
     def completion(self, text, state):
 
@@ -176,15 +183,18 @@ class REPL:
         if isinstance(command_, command.Command):
             raise TypeError("Can only register objects of type command.Command")
         self.__functions[command_.name] = command_
+        return self
 
     def unregister(self, name):
         try:
             del self.__functions[name]
         except KeyError as e:
             pass
+        return self
 
     def set_prompt(self, prompt_callable):
         self.__prompt = prompt_callable
+        return self
 
     # Oh boy
     # We have to figure out output redirection in this context, because this
@@ -236,9 +246,9 @@ class REPL:
 
     def execute(self, command, arguments):
         if self.__echo:
-            print("+ {} {}".format(command, " ".join(
-                [argument.quote() for argument in arguments]
-            )))
+            quoted = [syntax.quote(argument) for argument in arguments if
+                    argument]
+            print("+ {} {}".format(command, " ".join(quoted)))
 
         command = self.lookup_command(command)
 
@@ -355,6 +365,7 @@ class REPL:
 
     def set_echo(self, echo):
         self.__echo = bool(echo)
+        return self
 
     @property
     def done(self):
@@ -373,12 +384,14 @@ class REPL:
 
     def set(self, name, value):
         self.__env.bind(name, str(value))
+        return self
 
     def get(self, name):
         return self.__env.get(name)
 
     def unset(self, name):
         self.__env.unbind(name)
+        return self
 
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module
@@ -396,13 +409,15 @@ class REPL:
                 except common.REPLError as e:
                     print(e)
                 except TypeError as e:
-                    print(e)
+                    print("TypeError: " + str(e))
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
-            return
+            return self
         except Exception as e: # Really?
-            print(e)
-            self.go
+            print(type(e), ": ", e)
+            self.go()
+
+        return self
 
 # ========================================================================
 # REPL commands
@@ -702,6 +717,27 @@ class REPL:
                 "list {builtins, basis, functions, aliases, all}",
                 dedent("""
                     List available commands in one or all categories
+                    """).strip("\n")
+        )
+
+    def make_verbose_command(self):
+
+        def verbose(toggle):
+            if toggle == "on":
+                self.__echo = True
+            elif toggle == "off":
+                self.__echo = False
+            else:
+                print("Argument must be 'on' or 'off'")
+                return 2
+            return 0
+
+        return command.Command(
+                verbose,
+                "verbose",
+                "verbose {on, off}",
+                dedent("""
+                    Turn echoing of commands on or off
                     """).strip("\n")
         )
 
