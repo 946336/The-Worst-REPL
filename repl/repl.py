@@ -44,6 +44,7 @@ class REPL:
             modules_enabled = []):
         self.__name = application_name
         self.__echo = echo
+        self.__make_unknown_command = make_unknown_command
 
         self.__dotfile_prefix = dotfile_prefix or self.__name
         self.__dotfile_root = (os.getcwd() if dotfile_root is None else
@@ -162,7 +163,7 @@ class REPL:
 
     def __add_alias(self, newname, oldname):
         c = self.lookup_command(oldname)
-        if c.name != make_unknown_command("").name:
+        if c.name != self.__make_unknown_command("").name:
             self.__aliases[newname] = c
         return self
 
@@ -364,7 +365,7 @@ class REPL:
             if value is not None:
                 return value
 
-        return make_unknown_command(name)
+        return self.__make_unknown_command(name)
 
     def source(self, filename, quiet = False):
         self.__source_depth += 1
@@ -421,6 +422,11 @@ class REPL:
 
     def loaded_modules(self):
         return self.__modules_loaded
+
+    def set_unknown_command(self, command_factory):
+        if not isinstance(command_factory(""), command.Command)
+        self.__make_unknown_command = command_factory
+        return self
 
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module

@@ -77,11 +77,22 @@ initialization:
 * You may source scripts: `REPL.source()`
 * You may toggle whether or not REPL will echo the commands it executes:
   `REPL.set_echo()`
+* You may change the default command that is executed when REPL does not
+  recognize a command name: `REPL.set_unknown_command()`
 
 While not prohibited, it is possible to leverage `REPL.eval()` and other
 related functions to indirectly execute arbitrary REPL without informing the
 user. This is not recommended, and a responsible developer will find another
 way to accomplish the same task.
+
+## REPL.set\_unknown\_command()
+
+This function takes one parameter: a _command factory_. The command factory is
+invoked with a single parameter: the name of the command that the user issued,
+and is expected to return a command.
+
+The command produced is invoked with a variable number of arguments, dependent
+on user input.
 
 ## Modules
 
