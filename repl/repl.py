@@ -10,9 +10,13 @@ from textwrap import dedent
 # Oof
 import readline
 import atexit
+import importlib
 
 from .base import environment, command, syntax, common
 from .base import sink, repl_math
+
+# Modules
+from .base.modules import shell
 
 DEBUG = True
 
@@ -36,7 +40,8 @@ class REPL:
 
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
-            dotfile_root = None, history_length = 1000, echo = False):
+            dotfile_root = None, history_length = 1000, echo = False,
+            modules_enabled = []):
         self.__name = application_name
         self.__echo = echo
 
@@ -89,6 +94,15 @@ class REPL:
                 # name : command.Command
         }
 
+        self.__known_modules = {
+                "shell": self.__enable_shell,
+        }
+        self.__modules_loaded = []
+
+        # Load selected modules
+        for module in modules_enabled:
+            self.enable_module(module)
+
         # Readline and history setup
         self.__histfile = os.path.join(self.__dotfile_root,
             self.history_file_pattern.format(self.__dotfile_prefix))
@@ -110,12 +124,14 @@ class REPL:
             self.startup_file_pattern.format(self.__dotfile_prefix)),
                 quiet = True)
 
+        enabled_features = []
+
     def __add_builtin(self, command):
         self.__builtins[command.name] = command
         return self
 
     def setup_builtins(self):
-        self.__add_builtin(command.echo)
+        self.__add_builtin(shell.echo)
         self.__add_builtin(self.make_alias_command())
         self.__add_builtin(self.make_unalias_command())
         self.__add_builtin(self.make_help_command())
@@ -131,6 +147,7 @@ class REPL:
         self.__add_builtin(self.make_sleep_command())
         self.__add_builtin(self.make_list_command())
         self.__add_builtin(self.make_verbose_command())
+        self.__add_builtin(self.make_modules_command())
         return self
 
     def __add_basis(self, command):
@@ -406,6 +423,9 @@ class REPL:
         self.__env.unbind(name)
         return self
 
+    def loaded_modules(self):
+        return self.__modules_loaded
+
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module
     # and your own code, and you should probably do that manually. Just paste
@@ -436,11 +456,21 @@ class REPL:
 # Optional things - explicitly enable some features
 # ========================================================================
 
-    def enable_shell(self):
-        s = command.make_shell_command()
+    def enable_module(self, module_name):
+        try:
+            self.__known_modules[module_name]()
+        except KeyError as e:
+            print("No module {} known".format(module_name))
+        else:
+            if self.__echo: print("Loaded module {}".format(module_name))
+            self.__modules_loaded.append(module_name)
+
+        return self
+
+    def __enable_shell(self):
+        s = shell.make_shell_command()
         self.__add_builtin(s)
         self.__add_alias(s.name, "!")
-        return self
 
 # ========================================================================
 # REPL commands
@@ -762,5 +792,21 @@ class REPL:
                 dedent("""
                     Turn echoing of commands on or off
                     """).strip("\n")
+        )
+
+    def make_modules_command(self):
+
+        def modules():
+
+            if self.__modules_loaded:
+                print("\n".join(self.__modules_loaded))
+
+            return 0
+
+        return command.Command(
+                modules,
+                "modules",
+                "modules",
+                "List all loaded modules",
         )
 

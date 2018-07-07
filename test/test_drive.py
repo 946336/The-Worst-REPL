@@ -2,5 +2,5 @@
 
 from repl import repl
 
-repl.REPL("test").enable_shell().go()
+repl.REPL("test", modules_enabled = ["shell"]).go()
 
