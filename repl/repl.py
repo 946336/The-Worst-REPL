@@ -13,7 +13,7 @@ import atexit
 import importlib
 
 from .base import environment, command, syntax, common
-from .base import sink, repl_math
+from .base import sink
 
 # Modules
 from .base.modules import shell
