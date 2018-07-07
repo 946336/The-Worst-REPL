@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import sys, os
+import shlex
+
+import subprocess
+
+from repl import repl
+from repl.base import command
+
+target_command = None
+
+def make_do_command(name):
+
+    def do(*args):
+        num_substitutions = target_command.count("%s")
+
+        args = [name] + list(args)
+
+        if num_substitutions > len(args):
+            print("Not enough arguments to fill template: {}"
+                    .format(target_command))
+            return 2
+
+        bits = target_command % tuple(args[:num_substitutions])
+        bits = shlex.split(bits)
+
+        rest = args[num_substitutions:]
+
+        try:
+            res = subprocess.check_output(bits + rest,
+                    stderr = subprocess.PIPE,
+                    universal_newlines = True)
+        except ValueError as e:
+            print("Invalid arguments: {}".format(str(e)))
+            return 1
+        except OSError as e:
+            print("Error: {}".format(str(e)))
+            return 2
+        except subprocess.CalledProcessError as e:
+            print(e.stderr + e.stdout, end = "")
+            return e.returncode
+        else:
+            print(res, end = "")
+            return 0
+
+    return command.Command(
+            do,
+            "do",
+            "",
+            ""
+    )
+
+def usage():
+    import textwrap
+    print(textwrap.dedent("""
+        Usage: {} PROGRAM ...
+
+        Run a noninteractive CLI application wrapped in an interactive CLI
+        application.
+
+        If PROGRAM ... contains any '%s', they are replaced with pieces of
+        commands entered at the prompt.
+        """.format(sys.argv[0])).strip("\n"))
+
+if __name__ == "__main__":
+    argc, argv = len(sys.argv) - 1, sys.argv[1:]
+
+    if argc < 1:
+        usage()
+        sys.exit(1)
+
+    target_command = " ".join(argv)
+    name = shlex.split(target_command)[0]
+
+    r = repl.REPL(application_name = name,
+            dotfile_prefix = "wrap").set_unknown_command(make_do_command)
+
+    r.go()
+

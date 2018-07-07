@@ -18,8 +18,6 @@ from .base import sink
 # Modules
 from .base.modules import shell
 
-DEBUG = True
-
 def make_unknown_command(name):
 
     def unknown_command(*args):
@@ -158,7 +156,6 @@ class REPL:
 
     # No basis by default. Provide your own if you so desire
     def setup_basis(self):
-        self.__add_basis(repl_math.make_addition_command())
         return self
 
     def __add_alias(self, newname, oldname):
@@ -424,8 +421,10 @@ class REPL:
         return self.__modules_loaded
 
     def set_unknown_command(self, command_factory):
-        if not isinstance(command_factory(""), command.Command)
-        self.__make_unknown_command = command_factory
+        if isinstance(command_factory(""), command.Command):
+            self.__make_unknown_command = command_factory
+        else:
+            print("Factory does not produce Command. No changes made")
         return self
 
     # If you find yourself wanting to edit this function, don't bother. That
@@ -445,11 +444,13 @@ class REPL:
                     print(e)
                 except TypeError as e:
                     print("TypeError: " + str(e))
+                    raise e
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
             return self
         except Exception as e: # Really?
             print(type(e), ": ", e)
+            raise e
             self.go()
 
         return self
