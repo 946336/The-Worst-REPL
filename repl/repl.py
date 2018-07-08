@@ -36,6 +36,9 @@ class REPL:
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
 
+    # At this rate, we'll need to put up a system of REPLFunction-specific
+    # commands. This is getting a little too much like chaining REPLs than I'd
+    # like.
     class REPLFunction:
         def __init__(self, owner, name):
             self.__name = name
@@ -70,9 +73,12 @@ class REPL:
             return self
 
         def __call__(self, *args):
-            bindings = {}
+            bindings = {
+                "#": len(args),
+            }
+
             for position, argument in enumerate(args):
-                bindings[position + 1] = argument
+                bindings[str(position + 1)] = argument
 
             for line in self.__contents:
                 self.__owner.eval(line, bindings)

@@ -206,6 +206,7 @@ enabled modules using the `modules` command.
 * Flow control: Conditional statements
 * Flow control: Loops
 * Flow control: User-defined functions
+* Types: Array types
 * User-provided help text and usage lines for functions
 * Useful prompt variables
 * Parameter expansion

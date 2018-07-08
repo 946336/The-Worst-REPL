@@ -32,12 +32,12 @@ class ExpandableString:
 
         """
         Identifiers match one of the following regexes:
-        $[A-Za-z_?0-9][A-Za-z0-9_]*
-        ${[A-Za-z_?0-9][A-Za-z0-9_]*}
+        $[A-Za-z_0-9?#][A-Za-z0-9_]*
+        ${[A-Za-z_0-9?#][A-Za-z0-9_]*}
         """
 
-        identifier = re.compile("([A-Za-z0-9_?][A-Z-a-z0-9_]*)")
-        identifier2 = re.compile("{([A-Za-z0-9_?][A-Za-z0-9_]*)}")
+        identifier = re.compile("([A-Za-z0-9_?#][A-Z-a-z0-9_]*)")
+        identifier2 = re.compile("{([A-Za-z0-9_?#][A-Za-z0-9_]*)}")
 
         for debris in exploded:
             if len(debris) == 0:
@@ -268,11 +268,17 @@ def discard_comments(tokens):
 
     pieces = break_character(tokens, "#")
 
+    last = "@"
     for bit in pieces:
-        if type(bit) == str and bit == "#":
+        # Oof
+        if type(bit) == str and bit == "#" and last[-1] != "$":
             break
+        # Ouch
+        elif last[-1] == "$" and bit == "#":
+            tokens_[-1] += "#"
         else:
             tokens_.append(bit)
+        last = bit
 
     return tokens_
 
