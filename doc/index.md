@@ -199,6 +199,25 @@ enabled modules using the `modules` command.
 
 [Module Documentation](repl-modules.md)
 
+## Functions
+
+REPL allows you to define your own functions by composing existing
+functionality.
+
+```
+(test) >>> function greet
+(test/greet) ... echo Hello, $1!
+(test/greet) ... endfunction
+(test) >>> greet Justin
+Hello, Justin!
+```
+
+You may not define nested functions, and REPL does not have flow control.
+Positional parameters are designated `$1`, `$2`, etc. `$0` is the function's
+name, and `$#` is the total number of arguments the function was given.
+
+You may return a specific value by using the `return` command.
+
 ## Stretch Goals:
 
 * Canned support for communication over sockets, websockets, OS pipes, etc

@@ -74,6 +74,7 @@ class REPL:
 
         def __call__(self, *args):
             bindings = {
+                "0": self.__name,
                 "#": len(args),
             }
 
@@ -497,7 +498,7 @@ class REPL:
     def default_prompt(self, _):
         prompt = ""
         if self.__function_under_construction is not None:
-            prompt = "({}/{}) >>> ".format(self.__name,
+            prompt = "({}/{}) ... ".format(self.__name,
                     self.__function_under_construction.name)
         else:
             if self.__name == "repl":
@@ -936,6 +937,7 @@ class REPL:
                 "End the source code for a function"
         )
 
+        # TODO - fold into commands that are exclusive to REPLFunctions
     def make_return_command(self):
 
         def _return(value):
