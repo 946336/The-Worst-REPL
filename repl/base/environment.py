@@ -10,9 +10,10 @@ environments
 import json
 
 class Environment:
-    def __init__(self, name = "(?)", upstream = None, default_value = ""):
+    def __init__(self, name = "(?)", upstream = None, default_value = "",
+            initial_bindings = None):
         self.__name = name
-        self.__bindings = {}
+        self.__bindings = ({} if initial_bindings is None else initial_bindings)
 
         # Default value to give when something isn't found
         self.__default = default_value

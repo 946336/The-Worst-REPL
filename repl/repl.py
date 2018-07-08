@@ -18,6 +18,8 @@ from .base import sink
 # Modules
 from .base.modules import shell
 
+DEBUG = True
+
 def make_unknown_command(name):
 
     def unknown_command(*args):
@@ -40,6 +42,9 @@ class REPL:
     # commands. This is getting a little too much like chaining REPLs than I'd
     # like.
     class REPLFunction:
+        # This requires further thought
+        forbidden_names = []
+
         def __init__(self, owner, name):
             self.__name = name
             self.__owner = owner
@@ -56,7 +61,7 @@ class REPL:
             # Oof
             if line == "endfunction":
                 self.__owner.finish_function()
-                self.__owner.register(command.Command(
+                self.__owner.register_user_function(command.Command(
                     self,
                     self.__name,
                     "{} args".format(self.__name),
@@ -72,17 +77,28 @@ class REPL:
 
             return self
 
-        def __call__(self, *args):
+        def make_bindings(self, args):
             bindings = {
-                "0": self.__name,
-                "#": len(args),
+                "FUNCTION": self.__name,
+                "#": str(len(args)),
             }
 
             for position, argument in enumerate(args):
                 bindings[str(position + 1)] = argument
 
+            return bindings
+
+        def __call__(self, *args):
+            bindings = self.make_bindings(args)
+
             for line in self.__contents:
+                if line == "shift":
+                    args = args[1:]
+                    bindings = self.make_bindings(args)
+                    continue
                 self.__owner.eval(line, bindings)
+                if line.strip().startswith("return"):
+                    return
 
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
@@ -101,10 +117,7 @@ class REPL:
         self.__true_stdout = sys.stdout
         self.__function_under_construction = None
 
-        # The prompt should change when defining a function
-        # self.__prompt = (prompt
-        #         if application_name == "repl"
-        #         else lambda _: "({}) >>> ".format(self.__name))
+        # The default prompt changes when defining a function
         self.__prompt = self.default_prompt
 
         self.__escapechar = "\\"
@@ -132,7 +145,6 @@ class REPL:
         self.__basis = {
                 # name : command.Command
         }
-        self.setup_basis()
 
         # Populated by self.register(command)
         self.__functions = {
@@ -201,15 +213,12 @@ class REPL:
         self.__add_builtin(self.make_modules_command())
         self.__add_builtin(self.make_function_command())
         self.__add_builtin(self.make_endfunction_command())
+        self.__add_builtin(self.make_undef_command())
         self.__add_builtin(self.make_return_command())
         return self
 
     def __add_basis(self, command):
         self.__basis[command.name] = command
-        return self
-
-    # No basis by default. Provide your own if you so desire
-    def setup_basis(self):
         return self
 
     def __add_alias(self, newname, oldname):
@@ -259,6 +268,12 @@ class REPL:
     def register(self, command_):
         if not isinstance(command_, command.Command):
             raise TypeError("Can only register objects of type command.Command")
+        self.__basis[command_.name] = command_
+        return self
+
+    def register_user_function(self, command_):
+        if not isinstance(command_, command.Command):
+            raise TypeError("Can only register objects of type command.Command")
         self.__functions[command_.name] = command_
         return self
 
@@ -300,19 +315,17 @@ class REPL:
             self.__env.bind(self.__resultvar, "2")
             return ""
 
+        __env = self.__env
         bindings = self.__env
-
         if with_bindings is not None:
             e = environment.Environment(name = "arguments",
-                    upstream = self.__env)
-            for k, v in with_bindings.items():
-                e.bind(str(k), str(v))
+                    upstream = self.__env, initial_bindings = with_bindings)
             bindings = e
 
         bits = [bit.expand(bindings) for bit in bits]
 
-        bits = self.expand_subshells(bits)
-        bits = self.do_pipelines(bits)
+        bits = self.expand_subshells(bits, with_bindings)
+        bits = self.do_pipelines(bits, with_bindings)
 
         if len(bits) == 0:
             return ""
@@ -323,9 +336,11 @@ class REPL:
         elif len(bits) > 1:
             command, arguments = bits[0], bits[1:]
 
-        stdout = self.execute(command, arguments, self.__true_stdout)
-
-        # print(stdout, end="")
+        self.__env = bindings
+        try:
+            stdout = self.execute(command, arguments, self.__true_stdout)
+        finally:
+            self.__env = __env
 
         if type(sys.stdin) == StringIO: sys.stdin.close()
         sys.stdin = self.__true_stdin
@@ -354,6 +369,7 @@ class REPL:
                 self.__env.bind(self.__resultvar, str(result or 0))
         except TypeError as e:
             print("(Error) {}".format(command.usage))
+            if DEBUG: raise e
             self.__env.bind(self.__resultvar, str(255))
 
         stdout = out.getvalue()
@@ -361,7 +377,7 @@ class REPL:
 
         return stdout
 
-    def do_pipelines(self, bits):
+    def do_pipelines(self, bits, with_bindings = None):
         piped = [list(group) for k, group
                 in itertools.groupby(bits, lambda x: x == "|") if not k]
 
@@ -372,11 +388,23 @@ class REPL:
             stdin = self.__true_stdin
             out = None
             for command in piped:
-                command = self.expand_subshells(command)
+
+                __env = self.__env
+                bindings = self.__env
+                if with_bindings is not None:
+                    e = environment.Environment(name = "arguments",
+                            upstream = self.__env,
+                            initial_bindings = with_bindings)
+                    bindings = e
+
+                command = self.expand_subshells(command, with_bindings)
 
                 out = StringIO()
-                self.execute(command[0], command[1:], out)
-
+                self.__env = bindings
+                try:
+                    self.execute(command[0], command[1:], out)
+                finally:
+                    self.__env = __env
                 stdin = out
 
                 sys.stdin = stdin
@@ -384,7 +412,7 @@ class REPL:
 
         return bits
 
-    def expand_subshells(self, bits):
+    def expand_subshells(self, bits, with_bindings = None):
         # Handling subshell expansion
         if len([tick for tick in bits if tick == "`"]) % 2 != 0:
             raise common.REPLSyntaxError("Error: Unmatched `")
@@ -397,9 +425,24 @@ class REPL:
             if bit == "`":
                 if subshell: # Closing a subshell command
                     if len(accumulator) > 0:
-                        accumulator = self.do_pipelines(accumulator)
-                        fresh_bits.append(self.execute(accumulator[0],
-                            accumulator[1:]).rstrip("\n"))
+                        __env = self.__env
+                        bindings = self.__env
+                        if with_bindings is not None:
+                            e = environment.Environment(name = "arguments",
+                                    upstream = self.__env,
+                                    initial_bindings = with_bindings)
+                            bindings = e
+
+                        accumulator = self.do_pipelines(accumulator,
+                                with_bindings)
+
+                        self.__env = bindings
+                        try:
+                            fresh_bits.append(self.execute(accumulator[0],
+                                accumulator[1:]).rstrip("\n"))
+                        finally:
+                            self.__env = __env
+
                     accumulator = []
                 else: # Starting a subshell command
                     pass
@@ -414,6 +457,8 @@ class REPL:
         return fresh_bits
 
     def lookup_command(self, name):
+
+        if not name: return None
 
         envs = [self.__aliases,
                 self.__functions,
@@ -534,13 +579,16 @@ class REPL:
                     print(e)
                 except TypeError as e:
                     print("TypeError: " + str(e))
-                    raise e
+                    if DEBUG: raise e
+                except RecursionError as e:
+                    print("Maximum recursion depth exceeded")
+                    if DEBUG: raise e
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
             return self
         except Exception as e: # Really?
             print(type(e), ": ", e)
-            raise e
+            if DEBUG: raise e
             self.go()
 
         return self
@@ -910,6 +958,10 @@ class REPL:
                 print("Cannot create nested functions")
                 return 1
 
+            if name in REPL.REPLFunction.forbidden_names:
+                print("{} is a reserved name".format(name))
+                return 2
+
             self.__function_under_construction = \
                     self.REPLFunction(self, name)
 
@@ -948,5 +1000,25 @@ class REPL:
                 "return",
                 "return VAL",
                 "End a function and return a value"
+        )
+
+    def make_undef_command(self):
+
+        def undef(*names):
+            for name in names:
+                try:
+                    del self.__functions[name]
+                except KeyError as e:
+                    print("No function {} to remove".format(name))
+
+            return 0
+
+        return command.Command(
+                undef,
+                "undef",
+                "undef NAMES",
+                dedent("""
+                    Remove functions created with the `function` command
+                    """).strip("\n")
         )
 

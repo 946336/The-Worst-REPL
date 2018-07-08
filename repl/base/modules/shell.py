@@ -4,7 +4,13 @@ import subprocess
 from textwrap import dedent
 
 def _echo(*args):
-    print(" ".join(list(args)))
+    replaced = []
+    for arg in args:
+        s = arg.replace("\\n", "\n")
+        s =   s.replace("\\t", "\t")
+        replaced.append(s)
+
+    print(" ".join(list(replaced)))
     return 0
 
 echo = command.Command(_echo, "echo",

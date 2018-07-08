@@ -218,6 +218,13 @@ name, and `$#` is the total number of arguments the function was given.
 
 You may return a specific value by using the `return` command.
 
+Inside a function, positional arguments are bound successively to `$1`, `$2`,
+etc. The function name is bouond bound to `$FUNCTION`. `$#` and `shift` work
+much the same way as in bash.
+
+Unless assigning to a variable that was set in an enclosing scope, variables
+created inside of a function are function local.
+
 ## Stretch Goals:
 
 * Canned support for communication over sockets, websockets, OS pipes, etc
