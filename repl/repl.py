@@ -36,6 +36,47 @@ class REPL:
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
 
+    class REPLFunction:
+        def __init__(self, owner, name):
+            self.__name = name
+            self.__owner = owner
+
+            self.__contents = []
+
+        @property
+        def name(self):
+            return self.__name
+
+        def append(self, line):
+            line = line.strip()
+
+            # Oof
+            if line == "endfunction":
+                self.__owner.finish_function()
+                self.__owner.register(command.Command(
+                    self,
+                    self.__name,
+                    "{} args".format(self.__name),
+                    "function {}\n\t".format(self.__name)
+                    + "\n\t".join(self.__contents)
+                    + "\nendfunction"
+                ))
+            elif line.startswith("function"):
+                print("Cannot create nested function")
+                self.__owner.discard_function()
+            else:
+                self.__contents.append(line)
+
+            return self
+
+        def __call__(self, *args):
+            bindings = {}
+            for position, argument in enumerate(args):
+                bindings[position + 1] = argument
+
+            for line in self.__contents:
+                self.__owner.eval(line, bindings)
+
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
@@ -48,13 +89,16 @@ class REPL:
         self.__dotfile_root = (os.getcwd() if dotfile_root is None else
                 dotfile_root)
 
-        self.__prompt = (prompt
-                if application_name == "repl"
-                else lambda _: "({}) >>> ".format(self.__name))
-
         self.__done = False
         self.__true_stdin = sys.stdin
         self.__true_stdout = sys.stdout
+        self.__function_under_construction = None
+
+        # The prompt should change when defining a function
+        # self.__prompt = (prompt
+        #         if application_name == "repl"
+        #         else lambda _: "({}) >>> ".format(self.__name))
+        self.__prompt = self.default_prompt
 
         self.__escapechar = "\\"
         self.__resultvar = "?"
@@ -148,6 +192,9 @@ class REPL:
         self.__add_builtin(self.make_list_command())
         self.__add_builtin(self.make_verbose_command())
         self.__add_builtin(self.make_modules_command())
+        self.__add_builtin(self.make_function_command())
+        self.__add_builtin(self.make_endfunction_command())
+        self.__add_builtin(self.make_return_command())
         return self
 
     def __add_basis(self, command):
@@ -203,7 +250,7 @@ class REPL:
         return possibilities[state]
 
     def register(self, command_):
-        if isinstance(command_, command.Command):
+        if not isinstance(command_, command.Command):
             raise TypeError("Can only register objects of type command.Command")
         self.__functions[command_.name] = command_
         return self
@@ -219,7 +266,7 @@ class REPL:
         self.__prompt = prompt_callable
         return self
 
-    def eval(self, string):
+    def eval(self, string, with_bindings = None):
         """
         Unless the command is backslashed, lookup order is:
             * aliases
@@ -231,6 +278,10 @@ class REPL:
         Evaluate a string as a repl command
         The returned result is bound to the name ?, and the output is returned
         """
+        if self.__function_under_construction:
+            self.__function_under_construction.append(string)
+            return ""
+
         string = string.lstrip()
         if len(string) == 0: return ""
         if string[0] == "#": return ""
@@ -242,7 +293,16 @@ class REPL:
             self.__env.bind(self.__resultvar, "2")
             return ""
 
-        bits = [bit.expand(self.__env) for bit in bits]
+        bindings = self.__env
+
+        if with_bindings is not None:
+            e = environment.Environment(name = "arguments",
+                    upstream = self.__env)
+            for k, v in with_bindings.items():
+                e.bind(str(k), str(v))
+            bindings = e
+
+        bits = [bit.expand(bindings) for bit in bits]
 
         bits = self.expand_subshells(bits)
         bits = self.do_pipelines(bits)
@@ -425,6 +485,29 @@ class REPL:
             self.__make_unknown_command = command_factory
         else:
             print("Factory does not produce Command. No changes made")
+        return self
+
+
+    def default_prompt(self, _):
+        prompt = ""
+        if self.__function_under_construction is not None:
+            prompt = "({}/{}) >>> ".format(self.__name,
+                    self.__function_under_construction.name)
+        else:
+            if self.__name == "repl":
+                prompt = ">>> "
+            else:
+                prompt = "({}) >>> ".format(self.__name)
+
+        return prompt
+
+    def finish_function(self):
+        f = self.__function_under_construction
+        self.__function_under_construction = None
+        return f
+
+    def discard_function(self):
+        self.__function_under_construction = None
         return self
 
     # If you find yourself wanting to edit this function, don't bother. That
@@ -811,5 +894,51 @@ class REPL:
                 "modules",
                 "modules",
                 "List all loaded modules",
+        )
+
+    def make_function_command(self):
+
+        def function(name):
+            if self.__function_under_construction is not None:
+                print("Cannot create nested functions")
+                return 1
+
+            self.__function_under_construction = \
+                    self.REPLFunction(self, name)
+
+            return 0
+
+        return command.Command(
+                function,
+                "function",
+                "function name",
+                "Begin defining a function with that name"
+        )
+
+    def make_endfunction_command(self):
+
+        def endfunction():
+            if self.__function_under_construction is None:
+                print("No function to end")
+                return 1
+            return 0
+
+        return command.Command(
+                endfunction,
+                "endfunction",
+                "endfunction",
+                "End the source code for a function"
+        )
+
+    def make_return_command(self):
+
+        def _return(value):
+            return value
+
+        return command.Command(
+                _return,
+                "return",
+                "return VAL",
+                "End a function and return a value"
         )
 
