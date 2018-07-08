@@ -219,11 +219,19 @@ name, and `$#` is the total number of arguments the function was given.
 You may return a specific value by using the `return` command.
 
 Inside a function, positional arguments are bound successively to `$1`, `$2`,
-etc. The function name is bouond bound to `$FUNCTION`. `$#` and `shift` work
-much the same way as in bash.
+etc. The function name is bound to `$FUNCTION`. `$#` and `shift` work much the
+same way as in bash.
 
 Unless assigning to a variable that was set in an enclosing scope, variables
 created inside of a function are function local.
+
+If a function is declared with parameters, as below, then the arguments are
+available under the corresponding names, and REPL will not execute the
+function unless exactly that many arguments are supplied. For these functions,
+`shift` incrementally unsets parameters starting from the first.
+
+There is currently no way to express a function signature with a variable
+number of arguments.
 
 ## Stretch Goals:
 

@@ -9,8 +9,8 @@ class Command:
         self.__name = name if name else callable.__name__
 
         # If no helptext, use function metadata
-        self.__helptext = helptext if helptext else inspect.getdoc(callable)
         self.__usage = usage if usage else inspect.signature(callable)
+        self.__helptext = helptext if helptext else inspect.getdoc(callable)
 
     def __call__(self, *args):
         return self.__callable(*args)

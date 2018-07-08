@@ -21,11 +21,7 @@ does require at least the following in order to work correctly:
 * Your function MUST take only string parameters
 * Your function MAY take default parameters
 * Your function MAY have named parameters
-* Your function MUST NOT take aggregate keyword arguments (`**kwargs`)
-
-Because REPL captures the entirety of the output of your functions before
-continuing, nothing your function sends to standard output will be displayed
-until it terminates.
+* Your function SHOULD NOT take aggregate keyword arguments (`**kwargs`)
 
 ## Preparing your functions for REPL
 
@@ -53,6 +49,10 @@ Keep in mind that `callable` can itself be a thin wrapper serving as an
 adaptor between the function signature required by REPL and the original
 function signature.
 
+If any of `name`, `usage`, of `helptext` are falsy values, `Command` attempts
+to extract useful information from `callable` and uses that instead of leaving
+them blank.
+
 ## Interacting with REPL programmatically
 
 It is almost certain that your program will at some point want to interact
@@ -70,7 +70,7 @@ REPL also allows you to make the following types of changes after
 initialization:
 
 * You may replace the prompt callback: `REPL.set_prompt()`
-* You may register additional commands: `REPL.register()`
+* You may register additional commands to the basis: `REPL.register()`
 * You may set the values of environment variables: `REPL.set()`
 * You may register a new command: `REPL.register()`
 * You may remove a function: `REPL.unregister()`
@@ -103,6 +103,9 @@ explicitly enable these modules at initialization time using the
 a list of strings, each of which should be the name of a module.
 
 End users may see what modules are enabled with the `modules` command.
+
+For more details about the modules, see the [module
+documentation](repl-modules.md)
 
 Current modules are:
 

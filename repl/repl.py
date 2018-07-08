@@ -45,9 +45,10 @@ class REPL:
         # This requires further thought
         forbidden_names = []
 
-        def __init__(self, owner, name):
+        def __init__(self, owner, name, argspec = None):
             self.__name = name
             self.__owner = owner
+            self.__argspec = argspec
 
             self.__contents = []
 
@@ -55,20 +56,40 @@ class REPL:
         def name(self):
             return self.__name
 
+        @property
+        def argspec(self):
+            return self.__argspec
+
         def append(self, line):
             line = line.strip()
 
             # Oof
             if line == "endfunction":
                 self.__owner.finish_function()
+
+                usagestring = \
+                        ("{} args".format(self.__name)
+                        if not self.__argspec
+                        else "{} {}".format(self.__name,
+                            " ".join(self.__argspec)))
+
+                helpstring = \
+                    ("function {}\n\t".format(self.__name)
+                    + "\n\t".join(self.__contents) + "\nendfunction"
+                    if not self.__argspec else
+                    "function {} {}\n\t".format(self.__name,
+                        " ".join(self.__argspec))
+                    + "\n\t".join(self.__contents) + "\nendfunction"
+                    )
+
+
                 self.__owner.register_user_function(command.Command(
                     self,
                     self.__name,
-                    "{} args".format(self.__name),
-                    "function {}\n\t".format(self.__name)
-                    + "\n\t".join(self.__contents)
-                    + "\nendfunction"
+                    usagestring,
+                    helpstring
                 ))
+
             elif line.startswith("function"):
                 print("Cannot create nested function")
                 self.__owner.discard_function()
@@ -77,7 +98,7 @@ class REPL:
 
             return self
 
-        def make_bindings(self, args):
+        def make_bindings(self, args, argspec):
             bindings = {
                 "FUNCTION": self.__name,
                 "#": str(len(args)),
@@ -86,15 +107,26 @@ class REPL:
             for position, argument in enumerate(args):
                 bindings[str(position + 1)] = argument
 
+            if argspec:
+                for name in argspec:
+                    bindings[name] = argument
+
             return bindings
 
         def __call__(self, *args):
-            bindings = self.make_bindings(args)
+            if self.__argspec and len(args) != len(self.__argspec):
+                raise common.REPLRuntimeError("Usage: {} {}"
+                        .format(self.__name, " ".join(self.__argspec)))
+
+            argspec = self.__argspec[:]
+
+            bindings = self.make_bindings(args, argspec)
 
             for line in self.__contents:
                 if line == "shift":
                     args = args[1:]
-                    bindings = self.make_bindings(args)
+                    arspec = argspec[1:]
+                    bindings = self.make_bindings(args, argspec)
                     continue
                 self.__owner.eval(line, bindings)
                 if line.strip().startswith("return"):
@@ -539,7 +571,6 @@ class REPL:
             print("Factory does not produce Command. No changes made")
         return self
 
-
     def default_prompt(self, _):
         prompt = ""
         if self.__function_under_construction is not None:
@@ -953,7 +984,7 @@ class REPL:
 
     def make_function_command(self):
 
-        def function(name):
+        def function(name, *argspec):
             if self.__function_under_construction is not None:
                 print("Cannot create nested functions")
                 return 1
@@ -963,7 +994,7 @@ class REPL:
                 return 2
 
             self.__function_under_construction = \
-                    self.REPLFunction(self, name)
+                    self.REPLFunction(self, name, argspec)
 
             return 0
 
@@ -989,7 +1020,7 @@ class REPL:
                 "End the source code for a function"
         )
 
-        # TODO - fold into commands that are exclusive to REPLFunctions
+    # TODO - fold into commands that are exclusive to REPLFunctions
     def make_return_command(self):
 
         def _return(value):

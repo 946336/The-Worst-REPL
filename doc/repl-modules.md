@@ -11,7 +11,7 @@ builtin functions and may introduce new aliases.
 
 ## shell
 
-The `shell` module provides one command `shell` and one alias `=` to `shell`.
+The `shell` module provides one command `shell` and one alias `!` to `shell`.
 
 **shell**
 
