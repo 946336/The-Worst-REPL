@@ -7,7 +7,6 @@ from contextlib import redirect_stdout
 import itertools
 from textwrap import dedent
 
-# Oof
 import readline
 import atexit
 import importlib
@@ -17,8 +16,6 @@ from .base import sink
 
 # Modules
 from .base.modules import shell
-
-DEBUG = True
 
 def make_unknown_command(name):
 
@@ -60,41 +57,41 @@ class REPL:
         def argspec(self):
             return self.__argspec
 
+        def complete(self, line):
+            self.__owner.finish_function()
+
+            usagestring = \
+                    ("{} args".format(self.__name)
+                    if not self.__argspec
+                    else "{} {}".format(self.__name,
+                        " ".join(self.__argspec)))
+
+            helpstring = \
+                ("function {}\n\t".format(self.__name)
+                + "\n\t".join(self.__contents) + "\nendfunction"
+                if not self.__argspec else
+                "function {} {}\n\t".format(self.__name,
+                    " ".join(self.__argspec))
+                + "\n\t".join(self.__contents) + "\nendfunction"
+                )
+
+            self.__owner.register_user_function(command.Command(
+                self,
+                self.__name,
+                usagestring,
+                helpstring
+            ))
+
         def append(self, line):
             line = line.strip()
 
-            # Oof
             if line == "endfunction":
-                self.__owner.finish_function()
-
-                usagestring = \
-                        ("{} args".format(self.__name)
-                        if not self.__argspec
-                        else "{} {}".format(self.__name,
-                            " ".join(self.__argspec)))
-
-                helpstring = \
-                    ("function {}\n\t".format(self.__name)
-                    + "\n\t".join(self.__contents) + "\nendfunction"
-                    if not self.__argspec else
-                    "function {} {}\n\t".format(self.__name,
-                        " ".join(self.__argspec))
-                    + "\n\t".join(self.__contents) + "\nendfunction"
-                    )
-
-
-                self.__owner.register_user_function(command.Command(
-                    self,
-                    self.__name,
-                    usagestring,
-                    helpstring
-                ))
-
+                self.complete()
             elif line.startswith("function"):
-                print("Cannot create nested function")
+                print("Cannot create nested functions")
                 self.__owner.discard_function()
             else:
-                self.__contents.append(line)
+                self.__contents.append()
 
             return self
 
@@ -123,22 +120,27 @@ class REPL:
             bindings = self.make_bindings(args, argspec)
 
             for line in self.__contents:
+
+                # Execution-time builtins
                 if line == "shift":
                     args = args[1:]
                     arspec = argspec[1:]
                     bindings = self.make_bindings(args, argspec)
                     continue
+
                 self.__owner.eval(line, bindings)
+
                 if line.strip().startswith("return"):
                     return
 
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
-            modules_enabled = []):
+            modules_enabled = [], debug = False):
         self.__name = application_name
         self.__echo = echo
         self.__make_unknown_command = make_unknown_command
+        self.__debug = debug
 
         self.__dotfile_prefix = dotfile_prefix or self.__name
         self.__dotfile_root = (os.getcwd() if dotfile_root is None else
@@ -401,7 +403,7 @@ class REPL:
                 self.__env.bind(self.__resultvar, str(result or 0))
         except TypeError as e:
             print("(Error) {}".format(command.usage))
-            if DEBUG: raise e
+            if self.__debug: raise e
             self.__env.bind(self.__resultvar, str(255))
 
         stdout = out.getvalue()
@@ -610,16 +612,16 @@ class REPL:
                     print(e)
                 except TypeError as e:
                     print("TypeError: " + str(e))
-                    if DEBUG: raise e
+                    if self.__debug: raise e
                 except RecursionError as e:
                     print("Maximum recursion depth exceeded")
-                    if DEBUG: raise e
+                    if self.__debug: raise e
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
             return self
         except Exception as e: # Really?
             print(type(e), ": ", e)
-            if DEBUG: raise e
+            if self.__debug: raise e
             self.go()
 
         return self
