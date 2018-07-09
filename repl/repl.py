@@ -249,6 +249,7 @@ class REPL:
         self.__add_builtin(self.make_endfunction_command())
         self.__add_builtin(self.make_undef_command())
         self.__add_builtin(self.make_return_command())
+        self.__add_builtin(self.make_debug_command())
         return self
 
     def __add_basis(self, command):
@@ -661,7 +662,7 @@ class REPL:
                 alias,
                 "alias",
                 "alias newname name",
-                "Introduce new-name as an alias for name",
+                "Introduce newname as an alias for name",
         )
 
     def make_unalias_command(self):
@@ -1052,6 +1053,41 @@ class REPL:
                 "undef NAMES",
                 dedent("""
                     Remove functions created with the `function` command
+                    """).strip("\n")
+        )
+
+    def make_debug_command(self):
+
+        def debug(*args):
+
+            if len(args) > 1:
+                print("At most one subcommand expected")
+                return 2
+
+            if len(args) == 0:
+                print(str(self.__debug))
+                return 0
+
+            state = args[0]
+
+            if state.lower() == "on":
+                self.__debug = True
+            elif state.lower() == "off":
+                self.__debug = False
+            elif state.lower() == "toggle":
+                self.__debug = not self.__debug
+            else:
+                print("Subcommand must be one of: on, off, toggle")
+
+            return 0
+
+        return command.Command(
+                debug,
+                "debug",
+                "debug [on, off, toggle]",
+                dedent("""
+                    Toggle or query debugging behavior. When on, most errors
+                    stop the REPL and give a normal python stacktrace
                     """).strip("\n")
         )
 
