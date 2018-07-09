@@ -11,6 +11,10 @@ This is not an out-of-the-box solution, and it is certainly not intended to
 replace a full domain-specific language. In its current state, REPL is more of
 an interactive console than anything else.
 
+## Requirements
+
+REPL was developed on Python 3.5.
+
 ## Example
 
 We provide sample applications built with REPL, located in `example/`. Try
