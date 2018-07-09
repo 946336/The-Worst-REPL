@@ -86,7 +86,7 @@ class REPL:
             line = line.strip()
 
             if line == "endfunction":
-                self.complete()
+                self.complete(line)
             elif line.startswith("function"):
                 print("Cannot create nested functions")
                 self.__owner.discard_function()
