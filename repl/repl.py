@@ -91,7 +91,7 @@ class REPL:
                 print("Cannot create nested functions")
                 self.__owner.discard_function()
             else:
-                self.__contents.append()
+                self.__contents.append(line)
 
             return self
 
