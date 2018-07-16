@@ -7,9 +7,7 @@ from contextlib import redirect_stdout
 import itertools
 from textwrap import dedent
 
-import readline
 import atexit
-import importlib
 
 from .base import environment, command, syntax, common
 from .base import sink
@@ -141,6 +139,7 @@ class REPL:
         self.__echo = echo
         self.__make_unknown_command = make_unknown_command
         self.__debug = debug
+        self.__history_length = history_length
 
         self.__dotfile_prefix = dotfile_prefix or self.__name
         self.__dotfile_root = (os.getcwd() if dotfile_root is None else
@@ -192,26 +191,13 @@ class REPL:
 
         self.__known_modules = {
                 "shell": self.__enable_shell,
+                "readline": self.__enable_readline,
         }
         self.__modules_loaded = []
 
         # Load selected modules
         for module in modules_enabled:
             self.enable_module(module)
-
-        # Readline and history setup
-        self.__histfile = os.path.join(self.__dotfile_root,
-            self.history_file_pattern.format(self.__dotfile_prefix))
-        atexit.register(readline.write_history_file, self.__histfile)
-
-        try:
-            readline.read_history_file(self.__histfile)
-            readline.set_history_length(history_length)
-        except FileNotFoundError as e:
-            pass
-
-        readline.parse_and_bind("tab: complete")
-        readline.set_completer(self.completion)
 
         # Source startup file
         self.__source_depth = 0
@@ -299,6 +285,26 @@ class REPL:
                 if candidate.startswith(text.strip("\n"))]
 
         return possibilities[state]
+
+    def __enable_readline(self):
+        try:
+            import readline
+        except ImportError:
+            print("Could not import readline. Not enabling readline")
+
+        # Readline and history setup
+        self.__histfile = os.path.join(self.__dotfile_root,
+            self.history_file_pattern.format(self.__dotfile_prefix))
+        atexit.register(readline.write_history_file, self.__histfile)
+
+        try:
+            readline.read_history_file(self.__histfile)
+            readline.set_history_length(self.__history_length)
+        except FileNotFoundError as e:
+            pass
+
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(self.completion)
 
     def register(self, command_):
         if not isinstance(command_, command.Command):

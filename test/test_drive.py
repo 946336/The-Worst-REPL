@@ -2,5 +2,5 @@
 
 from repl import repl
 
-repl.REPL("test", modules_enabled = ["shell"], debug = True).go()
+repl.REPL("test", modules_enabled = ["shell", "readline"], debug = True).go()
 

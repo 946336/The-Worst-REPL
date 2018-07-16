@@ -75,7 +75,7 @@ if __name__ == "__main__":
     target_command = " ".join(argv)
     name = shlex.split(target_command)[0]
 
-    r = repl.REPL(application_name = name,
+    r = repl.REPL(application_name = name, modules_enabled = ["readline"],
             dotfile_prefix = "wrap").set_unknown_command(make_do_command)
 
     r.go()
