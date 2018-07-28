@@ -2,5 +2,6 @@
 
 from repl import repl
 
-repl.REPL("test", modules_enabled = ["shell", "readline"], debug = True).go()
+repl.REPL("test", modules_enabled = ["shell", "readline", "math"],
+        debug = True).go()
 

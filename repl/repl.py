@@ -13,7 +13,7 @@ from .base import environment, command, syntax, common
 from .base import sink
 
 # Modules
-from .base.modules import shell
+from .base.modules import shell, math
 
 def make_unknown_command(name):
 
@@ -33,9 +33,6 @@ class REPL:
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
 
-    # At this rate, we'll need to put up a system of REPLFunction-specific
-    # commands. This is getting a little too much like chaining REPLs than I'd
-    # like.
     class REPLFunction:
         # This requires further thought
         forbidden_names = []
@@ -56,7 +53,7 @@ class REPL:
             return self.__argspec
 
         def complete(self, line):
-            self.__owner.finish_function()
+            self.__owner.finish_block()
 
             usagestring = \
                     ("{} args".format(self.__name)
@@ -87,7 +84,7 @@ class REPL:
                 self.complete(line)
             elif line.startswith("function"):
                 print("Cannot create nested functions")
-                self.__owner.discard_function()
+                self.__owner.discard_block()
             else:
                 self.__contents.append(line)
 
@@ -131,6 +128,99 @@ class REPL:
                 if line.strip().startswith("return"):
                     return
 
+    # Hidden semantic construct. These are not exposed to the end user
+    class Block:
+        def __init__(self, owner, name = None):
+            self.__name = name
+            self.__owner = owner
+            self.__contents = []
+
+        def append(self, line):
+            line = line.strip()
+            return self
+
+        def __getitem__(self, index):
+            return self.__contents[index]
+
+    class Conditional:
+        def __init__(self, owner, condition):
+            self.__owner = owner
+            self.__name = "Conditional"
+
+            self.__condition = condition
+            self.__block = []
+
+            self.__chain = []
+            self.__else_block = []
+
+        @property
+        def name(self):
+            return self.__name
+
+        def complete(self):
+            self.__owner.complete_block()
+            for pred, blk in self.__chain:
+                self.__owner.eval(pred)
+                if str(self.__owner.get("?")) != "0":
+                    continue
+
+                for line in blk:
+                    if line.strip() == "break":
+                        raise common.REPLBreak()
+                    self.__owner.eval(line)
+
+        def append(self, line):
+            line = line.strip()
+            if line.startswith("endif"):
+                self.__chain.append((self.__condition, self.__block))
+                self.complete()
+            elif line.startswith("elif "):
+                self.__chain.append((self.__condition, self.__block))
+                self.__condition = line.split(" ", 1)[-1]
+                self.__block = []
+            elif line.startswith("else"):
+                self.__chain.append((self.__condition, self.__block))
+                self.__condition = "true" # Kill me
+                self.__block = []
+            else:
+                self.__block.append(line)
+            return self
+
+    # How could we handle a break?
+    # TODO Test the break statement
+    class Loop:
+        def __init__(self, owner, condition):
+            self.__condition = condition
+            self.__owner = owner
+            self.__name = "Loop"
+            self.__contents = []
+
+        @property
+        def name(self):
+            return self.__name
+
+        def complete(self):
+            self.__owner.complete_block()
+
+            self.__owner.eval(self.__condition)
+            while str(self.__owner.get("?")) == "0":
+                for line in self.__contents:
+                    if line.strip() == "break":
+                        break
+                    try:
+                        self.__owner.eval(line)
+                    except common.REPLBreak as e:
+                        break
+                self.__owner.eval(self.__condition)
+
+        def append(self, line):
+            line = line.strip()
+
+            if line.startswith("done"):
+                self.complete()
+            else:
+                self.__contents.append(line)
+
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
@@ -148,7 +238,7 @@ class REPL:
         self.__done = False
         self.__true_stdin = sys.stdin
         self.__true_stdout = sys.stdout
-        self.__function_under_construction = None
+        self.__block_under_construction = []
 
         # The default prompt changes when defining a function
         self.__prompt = self.default_prompt
@@ -192,6 +282,7 @@ class REPL:
         self.__known_modules = {
                 "shell": self.__enable_shell,
                 "readline": self.__enable_readline,
+                "math": self.__enable_math,
         }
         self.__modules_loaded = []
 
@@ -236,6 +327,12 @@ class REPL:
         self.__add_builtin(self.make_undef_command())
         self.__add_builtin(self.make_return_command())
         self.__add_builtin(self.make_debug_command())
+        self.__add_builtin(self.make_true_command())
+        self.__add_builtin(self.make_false_command())
+        self.__add_builtin(self.make_if_command())
+        self.__add_builtin(self.make_while_command())
+        self.__add_builtin(self.make_break_command())
+        self.__add_builtin(self.make_not_command())
         return self
 
     def __add_basis(self, command):
@@ -286,26 +383,6 @@ class REPL:
 
         return possibilities[state]
 
-    def __enable_readline(self):
-        try:
-            import readline
-        except ImportError:
-            print("Could not import readline. Not enabling readline")
-
-        # Readline and history setup
-        self.__histfile = os.path.join(self.__dotfile_root,
-            self.history_file_pattern.format(self.__dotfile_prefix))
-        atexit.register(readline.write_history_file, self.__histfile)
-
-        try:
-            readline.read_history_file(self.__histfile)
-            readline.set_history_length(self.__history_length)
-        except FileNotFoundError as e:
-            pass
-
-        readline.parse_and_bind("tab: complete")
-        readline.set_completer(self.completion)
-
     def register(self, command_):
         if not isinstance(command_, command.Command):
             raise TypeError("Can only register objects of type command.Command")
@@ -341,8 +418,9 @@ class REPL:
         Evaluate a string as a repl command
         The returned result is bound to the name ?, and the output is returned
         """
-        if self.__function_under_construction:
-            self.__function_under_construction.append(string)
+        # This should probably be a chain to allow nesting.
+        if self.__block_under_construction:
+            self.__block_under_construction[-1].append(string)
             return ""
 
         string = string.lstrip()
@@ -582,9 +660,12 @@ class REPL:
 
     def default_prompt(self, _):
         prompt = ""
-        if self.__function_under_construction is not None:
-            prompt = "({}/{}) ... ".format(self.__name,
-                    self.__function_under_construction.name)
+        if len(self.__block_under_construction) > 0:
+            prompt = "({}/{}) ... ".format(self.__name, "/".join(
+                [blk.name for blk in self.__block_under_construction]
+            ))
+            # prompt = "({}/{}) ... ".format(self.__name,
+            #         self.__block_under_construction.name)
         else:
             if self.__name == "repl":
                 prompt = ">>> "
@@ -593,14 +674,14 @@ class REPL:
 
         return prompt
 
-    def finish_function(self):
-        f = self.__function_under_construction
-        self.__function_under_construction = None
-        return f
+    def finish_block(self):
+        return self.__block_under_construction.pop()
 
-    def discard_function(self):
-        self.__function_under_construction = None
+    def discard_block(self):
+        self.__block_under_construction.pop()
         return self
+
+    complete_block = discard_block
 
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module
@@ -652,6 +733,34 @@ class REPL:
         s = shell.make_shell_command()
         self.__add_builtin(s)
         self.__add_alias("!", s.name)
+
+    def __enable_readline(self):
+        try:
+            import readline
+        except ImportError:
+            print("Could not import readline. Not enabling readline")
+
+        # Readline and history setup
+        self.__histfile = os.path.join(self.__dotfile_root,
+            self.history_file_pattern.format(self.__dotfile_prefix))
+        atexit.register(readline.write_history_file, self.__histfile)
+
+        try:
+            readline.read_history_file(self.__histfile)
+            readline.set_history_length(self.__history_length)
+        except FileNotFoundError as e:
+            pass
+
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(self.completion)
+
+    def __enable_math(self):
+        self.__add_builtin(math.make_addition_command())
+        self.__add_builtin(math.make_subtraction_command())
+        self.__add_builtin(math.make_multiply_command())
+        self.__add_builtin(math.make_divide_command())
+        self.__add_builtin(math.make_less_than_command())
+        self.__add_builtin(math.make_greater_than_command())
 
 # ========================================================================
 # REPL commands
@@ -994,16 +1103,12 @@ class REPL:
     def make_function_command(self):
 
         def function(name, *argspec):
-            if self.__function_under_construction is not None:
-                print("Cannot create nested functions")
-                return 1
-
             if name in REPL.REPLFunction.forbidden_names:
                 print("{} is a reserved name".format(name))
                 return 2
 
-            self.__function_under_construction = \
-                    self.REPLFunction(self, name, argspec)
+            self.__block_under_construction.append(self.REPLFunction(self, name,
+                argspec))
 
             return 0
 
@@ -1014,11 +1119,15 @@ class REPL:
                 "Begin defining a function with that name"
         )
 
+    # Proxy for REPLFunction functionality
     def make_endfunction_command(self):
 
         def endfunction():
-            if self.__function_under_construction is None:
+            if len(self.__block_under_construction) == 0:
                 print("No function to end")
+                return 1
+            elif type(self.__block_under_construction[-1]) != REPLFunction:
+                print("Enclosing scope is not a function")
                 return 1
             return 0
 
@@ -1095,5 +1204,111 @@ class REPL:
                     Toggle or query debugging behavior. When on, most errors
                     stop the REPL and give a normal python stacktrace
                     """).strip("\n")
+        )
+
+    def make_true_command(self):
+
+        def true(*args):
+            return 0
+
+        return command.Command(
+                true,
+                "true",
+                "true",
+                dedent("""
+                    Do nothing, successfully
+                    """).strip("\n")
+        )
+
+    def make_false_command(self):
+
+        def false(*args):
+            return 1
+
+        return command.Command(
+                false,
+                "false",
+                "false",
+                dedent("""
+                    Do nothing, unsuccessfully
+                    """).strip("\n")
+        )
+
+    def make_if_command(self):
+        def _if(*predicate):
+            if len(predicate) < 1:
+                print("Conditional statement must have a predicate")
+                return 2
+
+            self.__block_under_construction.append(self.Conditional(self,
+                " ".join(predicate)))
+
+            return 0
+
+        return command.Command(
+            _if,
+            "if",
+            "if condition ....",
+            dedent("""
+                Start a conditional block.
+                if predicate
+                ...
+                elif predicate2
+                ...
+                else
+                ...
+                endif
+                """).strip("\n")
+        )
+
+    def make_while_command(self):
+        def _while(*predicate):
+            if len(predicate) < 1:
+                print("Loop must have test")
+                return 2
+
+            self.__block_under_construction.append(self.Loop(self,
+                " ".join(predicate)
+                ))
+
+            return 0
+
+        return command.Command(
+            _while,
+            "while",
+            "while predicate",
+            dedent("""
+                Start a loop with the following structure:
+                while predicate
+                ...
+                done
+            """).strip("\n")
+        )
+
+    def make_break_command(self):
+        def _break(*args):
+            print("Only meaningful in a loop")
+            return 0
+
+        return command.Command(
+                _break,
+                "break",
+                "break",
+                "Break out of a loop"
+        )
+
+    def make_not_command(self):
+
+        def _not(*expr):
+            self.eval(" ".join(expr))
+            return 1 if str(self.get("?")) == "0" else 0
+
+        return command.Command(
+            _not,
+            "not",
+            "not [command]",
+            dedent("""
+                Invert the result of a command.
+                """).strip("\n")
         )
 
