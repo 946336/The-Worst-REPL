@@ -739,6 +739,7 @@ class REPL:
             import readline
         except ImportError:
             print("Could not import readline. Not enabling readline")
+            return
 
         # Readline and history setup
         self.__histfile = os.path.join(self.__dotfile_root,
