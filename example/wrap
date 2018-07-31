@@ -76,7 +76,8 @@ if __name__ == "__main__":
     name = shlex.split(target_command)[0]
 
     r = repl.REPL(application_name = name, modules_enabled = ["readline"],
-            dotfile_prefix = "wrap").set_unknown_command(make_do_command)
+            dotfile_prefix = "wrap", nodotfile = True,
+            noinit = True).set_unknown_command(make_do_command)
 
     r.go()
 

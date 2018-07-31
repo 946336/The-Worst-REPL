@@ -224,7 +224,12 @@ class REPL:
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
-            modules_enabled = [], debug = False):
+            modules_enabled = [], debug = False, noinit = False,
+            nodotfile = False, noenv = False):
+        # noinit: No builtins
+        # nodotfile: Don't use dotfile
+        # noenv: No environment
+
         self.__name = application_name
         self.__echo = echo
         self.__make_unknown_command = make_unknown_command
@@ -246,15 +251,16 @@ class REPL:
         self.__escapechar = "\\"
         self.__resultvar = "?"
 
-        self.__config_env = environment.Environment(self.name + "-env",
-                upstream = upstream_environment, default_value = "")
+        if not noenv:
+            self.__config_env = environment.Environment(self.name + "-env",
+                    upstream = upstream_environment, default_value = "")
 
-        self.__varfile = os.path.join(self.__dotfile_root,
-                self.configs_file_pattern.format(self.__dotfile_prefix))
-        self.load_config_vars()
+            self.__varfile = os.path.join(self.__dotfile_root,
+                    self.configs_file_pattern.format(self.__dotfile_prefix))
+            self.load_config_vars()
 
         self.__env = environment.Environment(self.name, upstream =
-                self.__config_env, default_value = "")
+                self.__config_env if not noenv else None, default_value = "")
         self.__env.bind(self.__resultvar, "0")
         self.__env.bind("0", self.__name)
 
@@ -262,7 +268,8 @@ class REPL:
         self.__builtins = {
                 # name : command.Command
         }
-        self.setup_builtins()
+        if not noinit:
+            self.setup_builtins()
 
         # Basis commands, if you have a need for them
         self.__basis = {
@@ -291,11 +298,12 @@ class REPL:
             self.enable_module(module)
 
         # Source startup file
-        self.__source_depth = 0
-        self.__max_source_depth = 500
-        self.source(os.path.join(self.__dotfile_root,
-            self.startup_file_pattern.format(self.__dotfile_prefix)),
-                quiet = True)
+        if not nodotfile:
+            self.__source_depth = 0
+            self.__max_source_depth = 500
+            self.source(os.path.join(self.__dotfile_root,
+                self.startup_file_pattern.format(self.__dotfile_prefix)),
+                    quiet = True)
 
         # Why must container type default arguments be like this
         enabled_features = []
