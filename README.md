@@ -41,7 +41,7 @@ For more details, see the [documentation](doc/index.md).
 * Shell-like syntax that will be mostly familiar to users who have experience
   in POSIX shells
 * Built-in supoport for a persistent plaintext variable store
-* Primitive tab completion for top-level commands
+* Primitive tab completion for top-level commands using GNU readline
 * Built-in help system
 * Customizable prompt
 
