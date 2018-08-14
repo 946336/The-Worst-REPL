@@ -94,6 +94,8 @@ class REPL:
             bindings = {
                 "FUNCTION": self.__name,
                 "#": str(len(args)),
+                "@": " ".join([syntax.quote(arg) for arg in args]),
+                "0": self.__name,
             }
 
             for position, argument in enumerate(args):
@@ -168,7 +170,11 @@ class REPL:
                     if line.strip() == "break":
                         raise common.REPLBreak()
                     self.__owner.eval(line)
+                return
 
+        # Stupidly, it's not a syntax error to have an else clause in the middle
+        # of a conditional chain, even though it's not particularly useful to do
+        # so
         def append(self, line):
             line = line.strip()
             if line.startswith("endif"):

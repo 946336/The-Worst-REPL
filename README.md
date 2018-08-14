@@ -13,11 +13,11 @@ an interactive console than anything else.
 
 ## Requirements
 
-REPL was developed on Python 3.5.
+REPL is being developed and tested on Python 3.5.
 
 ## Example
 
-We provide sample applications built with REPL, located in `example/`. Try
+We provide sample applications built with REPL, located in `example`. Try
 them out!
 
 ## What REPL _can_ do
@@ -52,7 +52,9 @@ If you are looking to use REPL for your own project, you will want to read
 
 ## Dependencies
 
-REPL depends on the python standard library and readline
+REPL has no hard dependencies, but has the following _optional_ dependencies:
+
+* readline: Required by the `readline` module
 
 ## License
 

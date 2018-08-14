@@ -38,7 +38,7 @@ If a variable `hello` is set, `$hello` will expand to its value.
     (test) >>> echo hello${there}
     hello, there
 
-Variable names must match the following regex: `[A-Za-z0-9_?][A-Z-a-z0-9_]*`
+Variable names must match the following regex: `$[A-Za-z_0-9?#@][A-Za-z0-9_]*`
 
 **Note:** Special variables
 
@@ -95,6 +95,8 @@ REPL also provides a command to list all available commands.
     (test) >>> list all
     ...
 
+There is currently no mechanism for providing customized help for subcommands.
+
 #### Aliases
 
 REPL allows you to create aliases for commands.
@@ -108,7 +110,7 @@ even `bash`: You may only introduce a new name for an existing command.
 
 The default name resolution order for commands is `aliases`, `functions`,
 `basis`, and finally `builtins`. Prefixing the command name with a backslash
-(\\) reverses REPL's lookup order for that command, potentially allowing you
+(`\`) reverses REPL's lookup order for that command, potentially allowing you
 to access a command that has been shadowed.
 
     (test) >>> echo list
@@ -165,23 +167,34 @@ control is returned to the user.
 REPL provides the following builtins by default:
 
     (test) >>> list builtins
-    help
-    echo
-    list
-    config
-    set
-    unset
-    cat
-    env
     alias
-    unalias
-    slice
+    break
+    cat
+    config
+    debug
+    echo
+    endfunction
+    env
     exit
-    quit
-    source
-    sleep
-    verbose
+    false
+    function
+    help
+    if
+    list
     modules
+    not
+    quit
+    return
+    set
+    sleep
+    slice
+    source
+    true
+    unalias
+    undef
+    unset
+    verbose
+    while
 
 Of note are `quit` and `exit`, which don't force the REPL to exit, but rather
 set a boolean flag in the REPL object to indicate that the user has decided to
@@ -204,23 +217,22 @@ enabled modules using the `modules` command.
 REPL allows you to define your own functions by composing existing
 functionality.
 
-```
-(test) >>> function greet
-(test/greet) ... echo Hello, $1!
-(test/greet) ... endfunction
-(test) >>> greet Justin
-Hello, Justin!
-```
+    (test) >>> function greet
+    (test/greet) ... echo Hello, $1!
+    (test/greet) ... endfunction
+    (test) >>> greet Justin
+    Hello, Justin!
 
-You may not define nested functions, and REPL does not have flow control.
-Positional parameters are designated `$1`, `$2`, etc. `$0` is the function's
-name, and `$#` is the total number of arguments the function was given.
+You may not define nested functions.  Positional parameters are designated `$1`,
+`$2`, etc. `$0` is the function's name, `$#` is the total number of
+arguments the function was given, and `$@` is the space-separated concatenation
+of all arguments.
 
 You may return a specific value by using the `return` command.
 
 Inside a function, positional arguments are bound successively to `$1`, `$2`,
-etc. The function name is bound to `$FUNCTION`. `$#` and `shift` work much the
-same way as in bash.
+etc. The function name is additionally  bound to `$FUNCTION`. `$#` and `shift`
+work much the same way as in bash.
 
 Unless assigning to a variable that was set in an enclosing scope, variables
 created inside of a function are function local.
@@ -231,15 +243,61 @@ function unless exactly that many arguments are supplied. For these functions,
 `shift` incrementally unsets parameters starting from the first.
 
 There is currently no way to express a function signature with a variable
-number of arguments.
+number of arguments if any are named.
+
+## Conditional logic
+
+REPL has a mechanism for conditional branching in the form of `if`/`elif`/`else`
+statements.
+
+    (test) >>> if true
+    (test/Conditional) ... echo First branch taken
+    (test/Conditional) ... elif false
+    (test/Conditional) ... echo Second branch taken
+    (test/Conditional) ... else
+    (test/Conditional) ... echo Last branch taken
+    (test/Conditional) ... endif
+    First branch taken
+
+Expressions following `if` and `elif` keywords are evaluated in order, and the
+first to evaluate to success (`0`) causes its corresponding block to be
+executed. The block corresponding to an `else` keyword will be executed if no
+preceding test succeeds. If no test succeeds and there is no `else` block,
+nothing happens.
+
+## Loops
+
+REPL provides a mockery of loops in the form of the `while` loop.
+
+    (test) >>> set i 0
+    (test) >>> while less-than '$i' 5
+    (test/Loop) ... echo i is $i
+    (test/Loop) ... set i `add 1 $i`
+    (test/Loop) ... done
+    i is 0
+    i is 1
+    i is 2
+    i is 3
+    i is 4
+
+The expression following the `while` keyword is the loop condition, and is
+evaluated once at the beginning of each loop iteration.
+
+**Note**
+
+`less-than` and `add` are builtins from the `math` module, and are not available
+by default.
+
+**DANGER:** The loop condition is currently expanded one time before being
+stored. For this reason, you _MUST_ protect variables with single quotes (`'`),
+or they will be expanded, and you will have a loop condition that no longer
+depends on the variable as you intended. For this reason, it is recommended that
+users use function calls as loop conditions instead.
 
 ## Stretch Goals:
 
 * Canned support for communication over sockets, websockets, OS pipes, etc
 * Configurable, rudimentary, read-only filesystem access
-* Flow control: Conditional statements
-* Flow control: Loops
-* Flow control: User-defined functions
 * Types: Array types
 * User-provided help text and usage lines for functions
 * Useful prompt variables
