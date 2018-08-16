@@ -264,6 +264,10 @@ class REPL:
             "if": self.__start_conditional,
             "break": self.__break,
             "return": self.__return,
+            "quit": self.__stop,
+            # Help should always be available, but the command version can
+            # be tweaked by the user
+            "help": self.__get_command_help,
         }
 
         # REPL builtins
@@ -321,7 +325,6 @@ class REPL:
         self.__add_builtin(self.make_help_command())
         self.__add_builtin(self.make_set_command())
         self.__add_builtin(self.make_unset_command())
-        self.__add_builtin(self.make_quit_command())
         self.__add_builtin(self.make_exit_command())
         self.__add_builtin(self.make_source_command())
         self.__add_builtin(self.make_cat_command())
@@ -356,7 +359,9 @@ class REPL:
         except FileNotFoundError as e:
             pass
         except json.decoder.JSONDecodeError as e:
-            if not str(e).endswith("(char 0)"): # ._.
+            # ._.
+            # JSON doesn't like empty files
+            if not str(e).endswith("(char 0)"):
                 print("Error reading config variables from {}"
                         .format(self.__varfile))
 
@@ -439,7 +444,8 @@ class REPL:
             return ""
 
         if str(bits[0]) in self.__keywords:
-            self.__keywords[str(bits[0])](bits[1:])
+            result = self.__keywords[str(bits[0])](bits[1:])
+            self.__env.bind(self.__resultvar, str(result or 0))
             return ""
 
         __env = self.__env
@@ -826,6 +832,33 @@ class REPL:
         self.__env.bind(self.__resultvar, str(value[0] or 0))
         raise common.REPLReturn(str(value[0]))
 
+    def __stop(self):
+        self.__done = True
+        return 0
+
+    def __get_command_help(self, name):
+        if not name: return 1
+
+        command = self.lookup_command(str(name[0]))
+
+        if command is None:
+            return 1
+
+        # In case the help command was somehow removed
+        if str(name[0]) == "help":
+            print(dedent("""
+                Usage: help command
+                Show help for a command
+                """).strip("\n"))
+            return 0
+
+        elif command.name == "Unknown":
+            print("No command {}".format(str(name[0])))
+            return 1
+
+        print(command.help)
+        return 0
+
 # ========================================================================
 # REPL commands
 # ========================================================================
@@ -914,27 +947,10 @@ class REPL:
                 "Unset a variable"
         )
 
-    def make_quit_command(self):
-
-        def quit():
-            self.__done = True
-            return 0
-
-        return command.Command(
-                quit,
-                "quit",
-                "quit",
-                "Stop the repl",
-        )
-
     def make_exit_command(self):
 
-        def exit():
-            self.__done = True
-            return 0
-
         return command.Command(
-                exit,
+                self.__stop,
                 "exit",
                 "exit",
                 "Stop the repl",
@@ -1178,7 +1194,7 @@ class REPL:
                 "undef",
                 "undef NAMES",
                 dedent("""
-                    Remove functions created with the `function` command
+                    Remove functions created with the `function` keyword
                     """).strip("\n")
         )
 

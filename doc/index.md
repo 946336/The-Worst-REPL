@@ -179,7 +179,6 @@ REPL provides the following builtins by default:
     list
     modules
     not
-    quit
     set
     sleep
     slice
