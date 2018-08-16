@@ -427,7 +427,6 @@ class REPL:
         Evaluate a string as a repl command
         The returned result is bound to the name ?, and the output is returned
         """
-        # This should probably be a chain to allow nesting.
         if self.__block_under_construction:
             self.__block_under_construction[-1].append(string)
             return ""
@@ -443,11 +442,6 @@ class REPL:
             self.__env.bind(self.__resultvar, "2")
             return ""
 
-        if str(bits[0]) in self.__keywords:
-            result = self.__keywords[str(bits[0])](bits[1:])
-            self.__env.bind(self.__resultvar, str(result or 0))
-            return ""
-
         __env = self.__env
         bindings = self.__env
         if with_bindings is not None:
@@ -455,6 +449,18 @@ class REPL:
                     upstream = self.__env, initial_bindings = with_bindings)
             bindings = e
 
+        if str(bits[0]) in self.__keywords:
+            self.__env = bindings
+            try:
+                result = self.__keywords[str(bits[0])](bits[1:])
+            finally:
+                self.__env = __env
+
+            self.__env.bind(self.__resultvar, str(result or 0))
+            return ""
+
+        # We can't do indiscriminate expansion before invoking keyword
+        # expressions, because loops would become horridly unwieldy
         bits = [bit.expand(bindings) for bit in bits]
 
         bits = self.expand_subshells(bits, with_bindings)
@@ -829,8 +835,13 @@ class REPL:
         return 0
 
     def __return(self, value):
-        self.__env.bind(self.__resultvar, str(value[0] or 0))
-        raise common.REPLReturn(str(value[0]))
+        if not value: return
+
+        [value] = value
+        value = value.expand(self.__env)
+
+        self.__env.bind(self.__resultvar, str(value or 0))
+        raise common.REPLReturn(str(value))
 
     def __stop(self):
         self.__done = True
@@ -839,13 +850,16 @@ class REPL:
     def __get_command_help(self, name):
         if not name: return 1
 
-        command = self.lookup_command(str(name[0]))
+        [name] = name
+        name = name.expand(self.__env)
+
+        command = self.lookup_command(str(name))
 
         if command is None:
             return 1
 
         # In case the help command was somehow removed
-        if str(name[0]) == "help":
+        if str(name) == "help":
             print(dedent("""
                 Usage: help command
                 Show help for a command
@@ -853,7 +867,7 @@ class REPL:
             return 0
 
         elif command.name == "Unknown":
-            print("No command {}".format(str(name[0])))
+            print("No command {}".format(str(name)))
             return 1
 
         print(command.help)
@@ -1182,10 +1196,7 @@ class REPL:
 
         def undef(*names):
             for name in names:
-                try:
-                    del self.__functions[name]
-                except KeyError as e:
-                    print("No function {} to remove".format(name))
+                self.unregister(name)
 
             return 0
 
