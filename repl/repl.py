@@ -608,6 +608,7 @@ class REPL:
         if self.__source_depth > self.__max_source_depth:
             sys.stderr.write("source: maximum depth exceeded ({})".format(
                 self.__max_source_depth))
+            self.__source_depth -= 1
             return 1
 
         try:
