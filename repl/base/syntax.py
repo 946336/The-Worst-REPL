@@ -21,6 +21,15 @@ class ExpandableString:
     def __len__(self):
         return len(self.__s)
 
+    def lstrip(self, *args, **kwargs):
+        return self.__s.lstrip(*args, **kwargs)
+
+    def rstrip(self, *args, **kwargs):
+        return self.__s.rstrip(*args, **kwargs)
+
+    def strip(self, *args, **kwargs):
+        return self.__s.strip(*args, **kwargs)
+
     def expand(self, env):
         s = self.__s
 

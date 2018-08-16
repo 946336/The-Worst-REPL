@@ -242,6 +242,10 @@ available under the corresponding names, and REPL will not execute the
 function unless exactly that many arguments are supplied. For these functions,
 `shift` incrementally unsets parameters starting from the first.
 
+    (test) >>> function quote str
+    (test/quote) ... echo "'$str'"
+    (test/quote) ... endfunction
+
 There is currently no way to express a function signature with a variable
 number of arguments if any are named.
 
@@ -267,10 +271,10 @@ nothing happens.
 
 ## Loops
 
-REPL provides a mockery of loops in the form of the `while` loop.
+REPL provides a single type of loop in the form of the `while` loop.
 
     (test) >>> set i 0
-    (test) >>> while less-than '$i' 5
+    (test) >>> while less-than $i 5
     (test/Loop) ... echo i is $i
     (test/Loop) ... set i `add 1 $i`
     (test/Loop) ... done
@@ -287,12 +291,6 @@ evaluated once at the beginning of each loop iteration.
 
 `less-than` and `add` are builtins from the `math` module, and are not available
 by default.
-
-**DANGER:** The loop condition is currently expanded one time before being
-stored. For this reason, you _MUST_ protect variables with single quotes (`'`),
-or they will be expanded, and you will have a loop condition that no longer
-depends on the variable as you intended. For this reason, it is recommended that
-users use function calls as loop conditions instead.
 
 ## Stretch Goals:
 

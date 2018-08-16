@@ -120,3 +120,16 @@ def make_greater_than_command():
             """).strip("\n")
     )
 
+def make_equal_command():
+    def eq(lhs, rhs):
+        return 0 if lhs == rhs else 1
+
+    return command.Command(
+            eq,
+            "equal",
+            "equal lhs rhs",
+            dedent("""
+                Compare two things for equality
+                """)
+            )
+
