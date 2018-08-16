@@ -168,23 +168,18 @@ REPL provides the following builtins by default:
 
     (test) >>> list builtins
     alias
-    break
     cat
     config
     debug
     echo
-    endfunction
     env
     exit
     false
-    function
     help
-    if
     list
     modules
     not
     quit
-    return
     set
     sleep
     slice
@@ -194,7 +189,6 @@ REPL provides the following builtins by default:
     undef
     unset
     verbose
-    while
 
 Of note are `quit` and `exit`, which don't force the REPL to exit, but rather
 set a boolean flag in the REPL object to indicate that the user has decided to
