@@ -47,7 +47,7 @@ def make_shell_command():
             "shell",
             "shell command [arguments]",
             dedent("""
-                Execute a program on the underlying system
+                Execute a program noninteractively on the underlying system
                 """).strip("\n")
     )
 

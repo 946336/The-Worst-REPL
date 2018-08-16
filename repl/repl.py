@@ -460,7 +460,7 @@ class REPL:
             return ""
 
         # We can't do indiscriminate expansion before invoking keyword
-        # expressions, because loops would become horridly unwieldy
+        # expressions, because loops would become horribly unwieldy
         bits = [bit.expand(bindings) for bit in bits]
 
         bits = self.expand_subshells(bits, with_bindings)
