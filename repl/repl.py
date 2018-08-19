@@ -5,12 +5,12 @@ import time
 from io import StringIO
 from contextlib import redirect_stdout
 import itertools
-from textwrap import dedent
 
 import atexit
 
 from .base import environment, command, syntax, common
 from .base import sink
+from .base.command import helpfmt
 
 # Modules
 from .base.modules import shell, math
@@ -319,7 +319,7 @@ class REPL:
         return self
 
     def setup_builtins(self):
-        self.__add_builtin(shell.echo)
+        self.__add_builtin(self.make_echo_command())
         self.__add_builtin(self.make_alias_command())
         self.__add_builtin(self.make_unalias_command())
         self.__add_builtin(self.make_help_command())
@@ -860,10 +860,10 @@ class REPL:
 
         # In case the help command was somehow removed
         if str(name) == "help":
-            print(dedent("""
+            print(helpfmt("""
                 Usage: help command
                 Show help for a command
-                """).strip("\n"))
+                """))
             return 0
 
         elif command.name == "Unknown":
@@ -1066,10 +1066,10 @@ class REPL:
                 env,
                 "env",
                 "env [all]",
-                dedent("""
+                helpfmt("""
                 Show all non-config variables.
                     If all is given, list everything, including but not
-                    limited to config variables""".lstrip("\n"))
+                    limited to config variables""")
         )
 
     def make_slice_command(self):
@@ -1092,10 +1092,10 @@ class REPL:
                 slice,
                 "slice",
                 "slice string start-index end-index",
-                dedent("""
+                helpfmt("""
                     Slice out a substring. start and end may be :, indicating
                     the ends of the string.
-                """).strip("\n")
+                """)
         )
 
     def make_sleep_command(self):
@@ -1152,9 +1152,9 @@ class REPL:
                 list,
                 "list",
                 "list {builtins, basis, functions, aliases, all}",
-                dedent("""
+                helpfmt("""
                     List available commands in one or all categories
-                    """).strip("\n")
+                    """)
         )
 
     def make_verbose_command(self):
@@ -1173,9 +1173,9 @@ class REPL:
                 verbose,
                 "verbose",
                 "verbose {on, off}",
-                dedent("""
+                helpfmt("""
                     Turn echoing of commands on or off
-                    """).strip("\n")
+                    """)
         )
 
     def make_modules_command(self):
@@ -1204,9 +1204,9 @@ class REPL:
                 undef,
                 "undef",
                 "undef NAMES",
-                dedent("""
+                helpfmt("""
                     Remove functions created with the `function` keyword
-                    """).strip("\n")
+                    """)
         )
 
     def make_debug_command(self):
@@ -1238,10 +1238,10 @@ class REPL:
                 debug,
                 "debug",
                 "debug [on, off, toggle]",
-                dedent("""
+                helpfmt("""
                     Toggle or query debugging behavior. When on, most errors
                     stop the REPL and give a normal python stacktrace
-                    """).strip("\n")
+                    """)
         )
 
     def make_true_command(self):
@@ -1253,9 +1253,9 @@ class REPL:
                 true,
                 "true",
                 "true",
-                dedent("""
+                helpfmt("""
                     Do nothing, successfully
-                    """).strip("\n")
+                    """)
         )
 
     def make_false_command(self):
@@ -1267,9 +1267,9 @@ class REPL:
                 false,
                 "false",
                 "false",
-                dedent("""
+                helpfmt("""
                     Do nothing, unsuccessfully
-                    """).strip("\n")
+                    """)
         )
 
     def make_not_command(self):
@@ -1282,8 +1282,38 @@ class REPL:
             _not,
             "not",
             "not [command]",
-            dedent("""
+            helpfmt("""
                 Invert the result of a command.
-                """).strip("\n")
+                """)
         )
+
+    def make_echo_command(self):
+        escape_sequences = [
+            (r"\n", "\n"),
+            (r"\t", "\t"),
+            (r"\a", "\a"),
+            (r"\b", "\b"),
+            (r"\f", "\f"),
+            (r"\r", "\r"),
+            (r"\v", "\v"),
+            (r"\e", ""),
+        ]
+        def _echo(*args):
+            replaced = []
+            for arg in args:
+                for target, result in escape_sequences:
+                    arg = arg.replace(target, result)
+                replaced.append(arg)
+
+            print(" ".join(list(replaced)))
+            return 0
+
+        return command.Command(_echo, "echo",
+                *command.helpfmt("""
+                    echo [ args ]
+                    """, """
+                    Write arguments to standard output
+                    """)
+        )
+
 

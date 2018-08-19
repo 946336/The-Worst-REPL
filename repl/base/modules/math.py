@@ -1,6 +1,5 @@
 
 from .. import command
-from textwrap import dedent
 import sys
 
 def number(arg):
@@ -95,9 +94,9 @@ def make_less_than_command():
         less_than,
         "less-than",
         "less-than lhs rhs",
-        dedent("""
+        helpfmt("""
             Compare two numbers, returning true if lhs is less than rhs
-            """).strip("\n")
+            """)
     )
 
 def make_greater_than_command():
@@ -115,9 +114,9 @@ def make_greater_than_command():
         greater_than,
         "greater-than",
         "greater-than lhs rhs",
-        dedent("""
+        helpfmt("""
             Compare two numbers, returning true if lhs is greater than rhs
-            """).strip("\n")
+            """)
     )
 
 def make_equal_command():
@@ -128,7 +127,7 @@ def make_equal_command():
             eq,
             "equal",
             "equal lhs rhs",
-            dedent("""
+            helpfmt("""
                 Compare two things for equality
                 """)
             )

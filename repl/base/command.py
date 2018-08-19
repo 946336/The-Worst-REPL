@@ -1,5 +1,5 @@
 
-import inspect
+import inspect, textwrap
 
 class Command:
     def __init__(self, callable, name = "", usage = "", helptext = ""):
@@ -34,4 +34,10 @@ class Command:
     @help.setter
     def set_help(self, helptext):
         self.__helptext = helptext
+
+def helpfmt(*text):
+    formatted = []
+    for item in text:
+        formatted.append(textwrap.dedent(item).strip("\n"))
+    return formatted if len(formatted) != 1 else formatted[0]
 

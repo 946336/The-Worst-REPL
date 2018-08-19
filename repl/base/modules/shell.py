@@ -1,25 +1,6 @@
 from .. import command, syntax
 
 import subprocess
-from textwrap import dedent
-
-def _echo(*args):
-    replaced = []
-    for arg in args:
-        s = arg.replace("\\n", "\n")
-        s =   s.replace("\\t", "\t")
-        replaced.append(s)
-
-    print(" ".join(list(replaced)))
-    return 0
-
-echo = command.Command(_echo, "echo",
-        dedent("""
-            echo [ args ]
-            """).strip(),
-        dedent("""
-        Write arguments to standard output
-        """).strip())
 
 def make_shell_command():
 
@@ -46,8 +27,8 @@ def make_shell_command():
             shell,
             "shell",
             "shell command [arguments]",
-            dedent("""
+            helpfmt("""
                 Execute a program noninteractively on the underlying system
-                """).strip("\n")
+                """)
     )
 
