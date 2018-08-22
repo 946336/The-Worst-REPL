@@ -44,6 +44,7 @@ For more details, see the [documentation](doc/index.md).
 * Primitive tab completion for top-level commands using GNU readline
 * Built-in help system
 * Customizable prompt
+* Primitive debugging facilities
 
 ## Using REPL
 

@@ -172,6 +172,7 @@ REPL provides the following builtins by default:
     config
     debug
     echo
+    echoe
     env
     exit
     false
@@ -285,6 +286,45 @@ evaluated once at the beginning of each loop iteration.
 `less-than` and `add` are builtins from the `math` module, and are not available
 by default.
 
+## Debugging
+
+**Note** This is part of the module `debug`, but is documented here because in
+theory, it is important enough to warrant it.
+
+REPL provides a very rudimentary debugging tool: `debug`. Issuing the `debug`
+command interrupts execution and drops into an interactive session where, in
+addition to all of the usual commands, additional debugging commands are
+available. Execution resumes when the debugging session is ended.
+
+At this time, the only debugging tool provided is the ability to see a
+rudimentary stacktrace, using any of the `stack`, `backtrace`, `bt`, or `where`
+commands in a debug session.
+
+    (test) >>> function aFunction
+    (test) >>> function a
+    (test/a) ... debug
+    (test/a) ... endfunction
+    (test) >>> function b
+    (test/b) ... a
+    (test/b) ... endfunction
+    (test) >>> function c
+    (test/c) ... b
+    (test/c) ... endfunction
+    (test) >>> c
+    DEBUG >>> stack
+    Showing stacktrace, most recent call last:
+    c
+    b
+    a
+
+## Timing
+
+REPL provides loq-precision timing capabilities in the form of the `time`
+command, which reports the CPU time taken to execute a command.
+
+    (test) >>> time sleep 2
+    Time elapsed: 2.0025s
+
 ## Stretch Goals:
 
 * Canned support for communication over sockets, websockets, OS pipes, etc
@@ -293,6 +333,6 @@ by default.
 * User-provided help text and usage lines for functions
 * Useful prompt variables
 * Parameter expansion
-* Canned modules/libraries
+* More canned modules/libraries
 * Initialization-time/runtime loading of canned modules/libraries by name
 
