@@ -12,9 +12,6 @@ from .base import environment, command, syntax, common
 from .base import sink
 from .base.command import helpfmt
 
-# Modules
-# from .base.modules import shell, math
-
 def make_unknown_command(name):
 
     def unknown_command(*args):
@@ -243,7 +240,9 @@ class REPL:
         self.__true_stdin = sys.stdin
 
         self.__block_under_construction = []
+
         self.__execution_depth = 1
+        self.__call_stack = []
 
         self.__prompt = self.default_prompt
 
@@ -302,6 +301,7 @@ class REPL:
                 "shell": self.__enable_shell,
                 "readline": self.__enable_readline,
                 "math": self.__enable_math,
+                "debug": self.__enable_debugging,
         }
         self.__modules_loaded = []
 
@@ -502,6 +502,7 @@ class REPL:
                 self.__execution_depth, command, " ".join(quoted)))
 
         command = self.lookup_command(command)
+        self.__call_stack.append(command.name)
 
         if command is None:
             return ""
@@ -520,6 +521,7 @@ class REPL:
             self.__env.bind(self.__resultvar, str(255))
         finally:
             self.__execution_depth -= 1
+            self.__call_stack.pop()
 
         stdout = out.getvalue()
         out.close()
@@ -818,6 +820,8 @@ class REPL:
         self.__add_builtin(math.make_greater_than_command())
         self.__add_builtin(math.make_equal_command())
 
+    def __enable_debugging(self):
+        self.__add_builtin(self.make_debug_command())
 
 # ========================================================================
 # REPL keyword handlers
@@ -1387,3 +1391,43 @@ class REPL:
                     Write arguments to standard error
                     """)
         )
+
+    def make_debug_command(self):
+        def debug():
+            cmd = None
+            while True:
+                sys.stderr.write("DEBUG >>> ")
+                try:
+                    cmd = input().strip()
+                except EOFError as e:
+                    sys.stderr.write("\n")
+                    sys.stdin = self.__true_stdin
+                    break
+
+                # using `debug` as an exit keyword is necessary to prevent
+                # nested debugging sessions
+                if cmd in ["debug", "exit", "quit"]: break
+                elif cmd in ["stack", "backtrace", "bt", "where"]:
+                    sys.stderr.write("Showing stacktrace, most "
+                            + "recent call last:\n")
+                    sys.stderr.write("{}\n"
+                            .format("\n".join(self.__call_stack[:-1])))
+                    continue
+
+                res = self.eval(cmd)
+                if res: sys.stderr.write(res.strip("\n") + "\n")
+
+            return 0
+
+        return command.Command(
+            debug,
+            "debug",
+            *command.helpfmt("""
+            debug
+            """, """
+            Interrupt the REPL and allow the user to interactively enter
+            commands, and then resume.
+            End a debugging session with the same command
+            """)
+        )
+
