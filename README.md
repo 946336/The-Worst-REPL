@@ -53,7 +53,8 @@ If you are looking to use REPL for your own project, you will want to read
 
 ## Dependencies
 
-REPL has no hard dependencies, but has the following _optional_ dependencies:
+REPL has no hard dependencies outside of the Python standard library, but has
+the following _optional_ dependencies:
 
 * readline: Required by the `readline` module
 
