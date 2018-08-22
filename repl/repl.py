@@ -13,7 +13,7 @@ from .base import sink
 from .base.command import helpfmt
 
 # Modules
-from .base.modules import shell, math
+# from .base.modules import shell, math
 
 def make_unknown_command(name):
 
@@ -85,7 +85,7 @@ class REPL:
             elif line.startswith("function"):
                 # We'd have problems with function
                 # lifetime and scope, so we can't really allow nested functions
-                print("Cannot create nested functions")
+                sys.stderr.write("Cannot create nested functions\n")
                 self.__owner.discard_block()
             else:
                 self.__contents.append(line)
@@ -128,7 +128,8 @@ class REPL:
                     continue
 
                 try:
-                    self.__owner.eval(line, bindings)
+                    res = self.__owner.eval(line, bindings)
+                    if res: print(res.strip("\n"))
                 except common.REPLReturn as e:
                     return e.value
 
@@ -155,7 +156,8 @@ class REPL:
                     continue
 
                 for line in blk:
-                    self.__owner.eval(line)
+                    res = self.__owner.eval(line)
+                    if res: print(res.strip("\n"))
                 return
 
         # Stupidly, it's not a syntax error to have an else clause in the middle
@@ -168,7 +170,7 @@ class REPL:
                 self.complete()
             elif line.startswith("elif"):
                 if len(line.split(" ")) == 1:
-                    print("Conditional block must have predicate")
+                    sys.stderr.write("Conditional block must have predicate\n")
                     self.__owner.discard_block()
                     return self
 
@@ -198,11 +200,13 @@ class REPL:
             self.__owner.complete_block()
 
             broken = False
-            self.__owner.eval(self.__condition)
+            res = self.__owner.eval(self.__condition)
+            if res: print(res.strip("\n"))
             while str(self.__owner.get("?")) == "0" and not broken:
                 for line in self.__contents:
                     try:
-                        self.__owner.eval(line)
+                        res = self.__owner.eval(line)
+                        if res: print(res.strip("\n"))
                     except common.REPLBreak as e:
                         broken = True
                         break
@@ -320,6 +324,7 @@ class REPL:
 
     def setup_builtins(self):
         self.__add_builtin(self.make_echo_command())
+        self.__add_builtin(self.make_echoe_command())
         self.__add_builtin(self.make_alias_command())
         self.__add_builtin(self.make_unalias_command())
         self.__add_builtin(self.make_help_command())
@@ -362,7 +367,7 @@ class REPL:
             # ._.
             # JSON doesn't like empty files
             if not str(e).endswith("(char 0)"):
-                print("Error reading config variables from {}"
+                sys.stderr.write("Error reading config variables from {}\n"
                         .format(self.__varfile))
 
         atexit.register(self.write_config)
@@ -438,25 +443,24 @@ class REPL:
         try:
             bits = syntax.split_whitespace(string)
         except common.REPLSyntaxError as e:
-            print("Syntax error: {}".format(e))
+            sys.stderr.write("Syntax error: {}\n".format(e))
             self.__env.bind(self.__resultvar, "2")
             return ""
 
         __env = self.__env
         bindings = self.__env
         if with_bindings is not None:
-            e = environment.Environment(name = "arguments",
+            e = environment.Environment(name = bits[0],
                     upstream = self.__env, initial_bindings = with_bindings)
             bindings = e
 
         if str(bits[0]) in self.__keywords:
             self.__env = bindings
+            result = None
             try:
                 result = self.__keywords[str(bits[0])](bits[1:])
             finally:
-                self.__env = __env
-
-            self.__env.bind(self.__resultvar, str(result or 0))
+                __env.bind(self.__resultvar, str(result or 0))
             return ""
 
         # We can't do indiscriminate expansion before invoking keyword
@@ -477,11 +481,12 @@ class REPL:
 
         self.__env = bindings
         try:
-            stdout = self.execute(command, arguments, self.__true_stdout)
+            stdout = self.execute(command, arguments)
         finally:
             self.__env = __env
 
-        if type(sys.stdin) == StringIO: sys.stdin.close()
+        if isinstance(sys.stdin, StringIO): sys.stdin.close()
+        # if type(sys.stdin) == StringIO: sys.stdin.close()
         sys.stdin = self.__true_stdin
         return stdout
 
@@ -507,7 +512,7 @@ class REPL:
                 result = command(*arguments)
                 self.__env.bind(self.__resultvar, str(result or 0))
         except TypeError as e:
-            print("(Error) {}".format(command.usage))
+            sys.stderr.write("(Error) {}\n".format(command.usage))
             if self.__debug: raise e
             self.__env.bind(self.__resultvar, str(255))
 
@@ -517,6 +522,8 @@ class REPL:
         return stdout
 
     def do_pipelines(self, bits, with_bindings = None):
+        if not any(["|" in bit for bit in bits]): return bits
+
         piped = [list(group) for k, group
                 in itertools.groupby(bits, lambda x: x == "|") if not k]
 
@@ -531,7 +538,7 @@ class REPL:
                 __env = self.__env
                 bindings = self.__env
                 if with_bindings is not None:
-                    e = environment.Environment(name = "arguments",
+                    e = environment.Environment(name = command,
                             upstream = self.__env,
                             initial_bindings = with_bindings)
                     bindings = e
@@ -556,6 +563,8 @@ class REPL:
         if len([tick for tick in bits if tick == "`"]) % 2 != 0:
             raise common.REPLSyntaxError("Error: Unmatched `")
 
+        if not any(["`" in bit for bit in bits]): return bits
+
         fresh_bits = []
 
         subshell = False
@@ -567,7 +576,7 @@ class REPL:
                         __env = self.__env
                         bindings = self.__env
                         if with_bindings is not None:
-                            e = environment.Environment(name = "arguments",
+                            e = environment.Environment(name = accumulator[0],
                                     upstream = self.__env,
                                     initial_bindings = with_bindings)
                             bindings = e
@@ -618,7 +627,7 @@ class REPL:
     def source(self, filename, quiet = False):
         self.__source_depth += 1
         if self.__source_depth > self.__max_source_depth:
-            sys.stderr.write("source: maximum depth exceeded ({})".format(
+            sys.stderr.write("source: maximum depth exceeded ({})\n".format(
                 self.__max_source_depth))
             self.__source_depth -= 1
             return 1
@@ -626,10 +635,12 @@ class REPL:
         try:
             with open(filename, "r") as f:
                 for line in f:
-                    self.eval(line.rstrip())
+                    res = self.eval(line.rstrip())
+                    if res: print(res.strip("\n"))
         except FileNotFoundError as e:
             if not quiet:
-                print("source: File not found ({})".format(filename))
+                sys.stderr.write("source: File not found ({})\n"
+                        .format(filename))
             self.__source_depth -= 1
             return 1
         self.__source_depth -= 1
@@ -676,7 +687,8 @@ class REPL:
         if isinstance(command_factory(""), command.Command):
             self.__make_unknown_command = command_factory
         else:
-            print("Factory does not produce Command. No changes made")
+            sys.stderr.write("Factory does not produce Command. No " +
+                    "changes made\n")
         return self
 
     def default_prompt(self, _):
@@ -714,24 +726,24 @@ class REPL:
         try:
             while not self.done:
                 try:
-                    self.eval(input(self.prompt).strip("\n"))
+                    print(self.eval(input(self.prompt).strip("\n")), end = "")
                 except TypeError as e:
-                    print("TypeError: " + str(e))
+                    sys.stderr.write("TypeError: " + str(e) + "\n")
                     if self.__debug: raise e
                 except RecursionError as e:
-                    print("Maximum recursion depth exceeded")
+                    sys.stderr.write("Maximum recursion depth exceeded\n")
                     if self.__debug: raise e
                 except common.REPLBreak as e:
-                    print("Cannot break when not executing a loop")
+                    sys.stderr.write("Cannot break when not executing a loop\n")
                 except common.REPLReturn as e:
-                    print("Cannot return from outside of function")
+                    sys.stderr.write("Cannot return from outside of function\n")
                 except common.REPLError as e:
-                    print(e)
+                    sys.stderr.write("{}\n".format(str(e)))
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
             return self
         except Exception as e: # Really?
-            print(type(e), ": ", e)
+            sys.stderr.write("{}: {}\n.format"(str(type(e)), str(e)))
             if self.__debug: raise e
             else: return self.go()
 
@@ -745,14 +757,21 @@ class REPL:
         try:
             self.__known_modules[module_name]()
         except KeyError as e:
-            print("No module {} known".format(module_name))
+            sys.stderr.write("No module {} known\n".format(module_name))
         else:
-            if self.__echo: print("Loaded module {}".format(module_name))
+            if self.__echo: sys.stderr.write("Loaded module {}\n"
+                    .format(module_name))
             self.__modules_loaded.append(module_name)
 
         return self
 
     def __enable_shell(self):
+        try:
+            from .base.modules import shell
+        except ImportError as e:
+            sys.stderr.write("Failed to import shell module. Please check " +
+                    "your installation\n")
+            return
         s = shell.make_shell_command()
         self.__add_builtin(s)
         self.__add_alias("!", s.name)
@@ -761,7 +780,8 @@ class REPL:
         try:
             import readline
         except ImportError:
-            print("Could not import readline. Not enabling readline")
+            sys.stderr.write("Could not import readline. Not enabling " +
+                    "readline\n")
             return
 
         # Readline and history setup
@@ -779,6 +799,12 @@ class REPL:
         readline.set_completer(self.completion)
 
     def __enable_math(self):
+        try:
+            from .base.modules import math
+        except ImportError as e:
+            sys.stderr.write("Failed to import math module. Please check " +
+                    "your installation\n")
+            return
         self.__add_builtin(math.make_addition_command())
         self.__add_builtin(math.make_subtraction_command())
         self.__add_builtin(math.make_multiply_command())
@@ -794,14 +820,14 @@ class REPL:
 
     def __start_function(self, rest):
         if len(rest) == 0:
-            print("Function must have a name")
+            sys.stderr.write("Function must have a name\n")
             self.__env.bind("?", "2")
             return
 
         name, argspec = rest[0], rest[1:]
 
         if name in REPL.REPLFunction.forbidden_names:
-            print("{} is a reserved word".format(name))
+            sys.stderr.write("{} is a reserved word\n".format(name))
             self.__env.bind("?", "3")
             return
 
@@ -810,7 +836,7 @@ class REPL:
 
     def __start_loop(self, rest):
         if len(rest) == 0:
-            print("Loop must have condition")
+            sys.stderr.write("Loop must have condition\n")
             self.__env.bind("?", "2")
             return
 
@@ -821,7 +847,7 @@ class REPL:
 
     def __start_conditional(self, rest):
         if len(rest) == 0:
-            print("Conditional block must have predicate")
+            stys.stderr.write("Conditional block must have predicate\n")
             self.__env.bind("?", "3")
             return
 
@@ -835,7 +861,7 @@ class REPL:
         return 0
 
     def __return(self, value):
-        if not value: return
+        if not value: raise common.REPLReturn(None)
 
         [value] = value
         value = value.expand(self.__env)
@@ -867,7 +893,7 @@ class REPL:
             return 0
 
         elif command.name == "Unknown":
-            print("No command {}".format(str(name)))
+            sys.stderr.write("No command {}\n".format(str(name)))
             return 1
 
         print(command.help)
@@ -897,7 +923,7 @@ class REPL:
             try:
                 del self.__aliases[name]
             except KeyError:
-                print("{} is not an alias".format(name))
+                sys.stderr.write("{} is not an alias\n".format(name))
                 return 1
             return 0
 
@@ -914,7 +940,7 @@ class REPL:
             command = self.lookup_command(name)
 
             if command.name == "Unknown":
-                print("No command {}".format(name))
+                sys.stderr.write("No command {}\n".format(name))
                 return 1
 
             print(command.help)
@@ -931,7 +957,7 @@ class REPL:
 
         def set(name, value):
             if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
-                print("Invalid identifier name")
+                sys.stderr.write("Invalid identifier name\n")
                 return 2
 
             self.set(name, value)
@@ -948,7 +974,7 @@ class REPL:
 
         def unset(name):
             if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
-                print("Invalid identifier name")
+                sys.stderr.write("Invalid identifier name\n")
                 return 2
 
             self.unset(name)
@@ -1003,35 +1029,36 @@ class REPL:
         def config(subcommand, *args):
             if subcommand == "set":
                 if len(args) != 2:
-                    print("Subcommand set expected name and value")
+                    sys.stderr.write("Subcommand set expected name and value\n")
                     return 1
 
                 name, value = args
                 if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
-                    print("Invalid identifier name")
+                    sys.stderr.write("Invalid identifier name\n")
                     return 2
 
                 self.__config_env.bind(name, value)
 
             elif subcommand == "unset":
                 if len(args) != 1:
-                    print("Subcommand unset expected name")
+                    sys.stderr.write("Subcommand unset expected name\n")
                     return 1
 
                 [name] = args
                 if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
-                    print("Invalid identifier name")
+                    sys.stderr.write("Invalid identifier name\n")
                     return 2
 
                 self.__config_env.unbind(name)
 
             elif subcommand == "list":
                 if len(args) != 0:
-                    print("Subcommand list takes no arguments")
+                    sysstderr.write("Subcommand list takes no arguments\n")
                     return 1
                 print("\n".join(self.__config_env.list()))
             else:
-                print("Unrecognized subcommand: {}".format(subcommand))
+                sys.stderr.write("Unrecognized subcommand: {}\n"
+                        .format(subcommand))
                 return 2
 
             return 0
@@ -1052,14 +1079,15 @@ class REPL:
                 return 0
 
             if len(which) > 1:
-                print("env expected at most one argument")
+                sys.stderr.write("env expected at most one argument\n")
                 return 1
 
             if which[0] == "all":
                 print("\n".join(self.__env.list_tree()))
                 return 0
             else:
-                print("Unrecognized subcommand: {}".format(which[0]))
+                sys.stderr.write("Unrecognized subcommand: {}\n"
+                        .format(which[0]))
                 return 2
 
         return command.Command(
@@ -1104,7 +1132,7 @@ class REPL:
             try:
                 time.sleep(int(seconds))
             except TypeError:
-                print("sleep expects an integer number of seconds")
+                sys.stderr.write("sleep expects an integer number of seconds\n")
                 return 2
 
             return 0
@@ -1144,8 +1172,8 @@ class REPL:
 
                 return 0
             else:
-                print("Valid categories are builtins, basis, functions, "
-                        + "aliases, and all")
+                sys.stderr.write("Valid categories are builtins, basis, "
+                        + "functions, aliases, and all\n")
                 return 2
 
         return command.Command(
@@ -1165,7 +1193,7 @@ class REPL:
             elif toggle == "off":
                 self.__echo = False
             else:
-                print("Argument must be 'on' or 'off'")
+                sys.stderr.write("Argument must be 'on' or 'off'\n")
                 return 2
             return 0
 
@@ -1214,7 +1242,7 @@ class REPL:
         def debug(*args):
 
             if len(args) > 1:
-                print("At most one subcommand expected")
+                sys.stderr.write("At most one subcommand expected\n")
                 return 2
 
             if len(args) == 0:
@@ -1230,7 +1258,7 @@ class REPL:
             elif state.lower() == "toggle":
                 self.__debug = not self.__debug
             else:
-                print("Subcommand must be one of: on, off, toggle")
+                sys.stderr.write("Subcommand must be one of: on, off, toggle\n")
 
             return 0
 
@@ -1317,3 +1345,31 @@ class REPL:
         )
 
 
+    def make_echoe_command(self):
+        escape_sequences = [
+                (r"\n", "\n"),
+                (r"\t", "\t"),
+                (r"\a", "\a"),
+                (r"\b", "\b"),
+                (r"\f", "\f"),
+                (r"\r", "\r"),
+                (r"\v", "\v"),
+                (r"\e", ""),
+                ]
+        def _echoe(*args):
+            replaced = []
+            for arg in args:
+                for target, result in escape_sequences:
+                    arg = arg.replace(target, result)
+                replaced.append(arg)
+
+            sys.stderr.write(" ".join(list(replaced)) + "\n")
+            return 0
+
+        return command.Command(_echoe, "echoe",
+                *command.helpfmt("""
+                    echoe [ args ]
+                    """, """
+                    Write arguments to standard error
+                    """)
+        )

@@ -94,7 +94,7 @@ def make_less_than_command():
         less_than,
         "less-than",
         "less-than lhs rhs",
-        helpfmt("""
+        command.helpfmt("""
             Compare two numbers, returning true if lhs is less than rhs
             """)
     )
@@ -114,7 +114,7 @@ def make_greater_than_command():
         greater_than,
         "greater-than",
         "greater-than lhs rhs",
-        helpfmt("""
+        command.helpfmt("""
             Compare two numbers, returning true if lhs is greater than rhs
             """)
     )
@@ -127,7 +127,7 @@ def make_equal_command():
             eq,
             "equal",
             "equal lhs rhs",
-            helpfmt("""
+            command.helpfmt("""
                 Compare two things for equality
                 """)
             )

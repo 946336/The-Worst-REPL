@@ -27,7 +27,7 @@ def make_shell_command():
             shell,
             "shell",
             "shell command [arguments]",
-            helpfmt("""
+            command.helpfmt("""
                 Execute a program noninteractively on the underlying system
                 """)
     )

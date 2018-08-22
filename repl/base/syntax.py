@@ -1,5 +1,6 @@
 
 import re
+import sys
 
 from .common import REPLSyntaxError
 
@@ -120,14 +121,17 @@ class NonExpandableString:
         return self.__s == rhs
 
 def quote(string):
-    try:
-        return string.quote()
-    except AttributeError as e:
-        string = re.sub("(['\"])", r"\\\1", string)
+    if type(string) == str:
+        string = re.sub("(['\"])", r"\1", string)
         if any((c in string) for c in [" ", "#", "|"]):
             return '"{}"'.format(string)
         else:
             return string
+    elif type(string) in [ExpandableString, NonExpandableString]:
+        return string.quote()
+    else:
+        # This has been a disaster
+        return string
 
 def is_string_type(s):
     t = type(s)
@@ -187,10 +191,12 @@ def merge_quotes(tokens):
 
 def merge_strings(tokens):
 
+    if not tokens: return tokens
+
     _tokens = []
 
-    acc = None
-    for t in tokens:
+    acc = tokens[0]
+    for t in tokens[1:]:
         if type(t) == str:
             acc = t if acc is None else acc + t
         else:
