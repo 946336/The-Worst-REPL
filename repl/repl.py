@@ -1,7 +1,7 @@
 
 import os, sys
 import json, re
-import time
+import time, timeit
 from io import StringIO
 from contextlib import redirect_stdout
 import itertools
@@ -272,6 +272,7 @@ class REPL:
             # Help should always be available, but the command version can
             # be tweaked by the user
             "help": self.__get_command_help,
+            "time": self.__time,
         }
 
         # REPL builtins
@@ -898,6 +899,15 @@ class REPL:
 
         print(command.help)
         return 0
+
+    def __time(self, bits):
+        bits = [str(syntax.quote(bit.expand(self.__env))) for bit in bits]
+        t0 = timeit.default_timer()
+        res = self.eval(" ".join(bits))
+        t1 = timeit.default_timer()
+
+        if res: print(res.strip("\n"))
+        print("Time elapsed: {:.4f}s".format(t1 - t0))
 
 # ========================================================================
 # REPL commands
