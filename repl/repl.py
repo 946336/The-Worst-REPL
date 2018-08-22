@@ -241,8 +241,9 @@ class REPL:
 
         self.__done = False
         self.__true_stdin = sys.stdin
-        self.__true_stdout = sys.stdout
+
         self.__block_under_construction = []
+        self.__execution_depth = 1
 
         self.__prompt = self.default_prompt
 
@@ -492,12 +493,13 @@ class REPL:
         return stdout
 
     def execute(self, command, arguments, output_redirect = None):
+        self.__execution_depth += 1
+
         if self.__echo:
             quoted = [syntax.quote(argument) for argument in arguments if
                     argument]
-            self.__true_stdout.write("+ {} {}\n".format(command,
-                " ".join(quoted)))
-            self.__true_stdout.flush()
+            self.stderr.write("{} {} {}\n".format("+" *
+                self.__execution_depth, command, " ".join(quoted)))
 
         command = self.lookup_command(command)
 
@@ -516,6 +518,8 @@ class REPL:
             sys.stderr.write("(Error) {}\n".format(command.usage))
             if self.__debug: raise e
             self.__env.bind(self.__resultvar, str(255))
+        finally:
+            self.__execution_depth -= 1
 
         stdout = out.getvalue()
         out.close()
