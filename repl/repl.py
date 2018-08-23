@@ -302,6 +302,7 @@ class REPL:
                 "readline": self.__enable_readline,
                 "math": self.__enable_math,
                 "debug": self.__enable_debugging,
+                "text": self.__enable_text,
         }
         self.__modules_loaded = []
 
@@ -812,6 +813,12 @@ class REPL:
                     "readline\n")
             return
 
+        # We allow - in names, so wheeee.... The other symbols don't come up too
+        # often
+        delims = readline.get_completer_delims()
+        delims = [delim for delim in delims if delim != "-"]
+        readline.set_completer_delims("".join(delims))
+
         # Readline and history setup
         self.__histfile = os.path.join(self.__dotfile_root,
             self.history_file_pattern.format(self.__dotfile_prefix))
@@ -839,6 +846,16 @@ class REPL:
 
     def __enable_debugging(self):
         self.__add_builtin(self.make_debug_command())
+
+    def __enable_text(self):
+        try:
+            from .base.modules import text
+        except ImportError as e:
+            sys.stderr.write("Failed to import text module. Please check " +
+                    "your installation\n")
+            return
+        for command in text.commands():
+            self.__add_builtin(command)
 
 # ========================================================================
 # REPL keyword handlers
