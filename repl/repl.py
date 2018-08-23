@@ -12,6 +12,8 @@ from .base import environment, command, syntax, common
 from .base import sink
 from .base.command import helpfmt
 
+from . import formatter
+
 def make_unknown_command(name):
 
     def unknown_command(*args):
@@ -59,12 +61,12 @@ class REPL:
                         " ".join(self.__argspec)))
 
             helpstring = \
-                ("function {}\n\t".format(self.__name)
-                + "\n\t".join(self.__contents) + "\nendfunction"
+                ("function {}\n".format(self.__name)
+                + formatter.format(self.__contents) + "\nendfunction"
                 if not self.__argspec else
-                "function {} {}\n\t".format(self.__name,
+                "function {} {}\n".format(self.__name,
                     " ".join(self.__argspec))
-                + "\n\t".join(self.__contents) + "\nendfunction"
+                + formatter.format(self.__contents) + "\nendfunction"
                 )
 
             self.__owner.register_user_function(command.Command(
