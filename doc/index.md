@@ -181,6 +181,7 @@ REPL provides the following builtins by default:
     modules
     not
     set
+    set-local
     sleep
     slice
     source
@@ -190,8 +191,8 @@ REPL provides the following builtins by default:
     unset
     verbose
 
-Of note are `quit` and `exit`, which don't force the REPL to exit, but rather
-set a boolean flag in the REPL object to indicate that the user has decided to
+Of particular note is `exit`, which doesn't force the REPL to exit, but rather
+sets a boolean flag in the REPL object to indicate that the user has decided to
 stop the REPL.
 
 REPL's `cat` is not useful, and is strictly less powerful than POSIX `cat`.
@@ -319,7 +320,7 @@ commands in a debug session.
 
 ## Timing
 
-REPL provides loq-precision timing capabilities in the form of the `time`
+REPL provides low-precision timing capabilities in the form of the `time`
 command, which reports the CPU time taken to execute a command.
 
     (test) >>> time sleep 2

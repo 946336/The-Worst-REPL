@@ -132,3 +132,41 @@ def make_equal_command():
                 """)
             )
 
+def make_increment_command():
+    def inc(n, step = 1):
+        try:
+            n = number(n)
+        except ValueError as e:
+            print("Can only increment valid numbers")
+            return 2
+        print(n + step)
+        return 0
+
+    return command.Command(
+            inc,
+            "increment",
+            "increment number [step]",
+            command.helpfmt("""
+                Increment a number by 1 (default) or by a set step amount
+                """)
+            )
+
+def make_decrement_command():
+    def dec(n, step = 1):
+        try:
+            n = number(n)
+        except ValueError as e:
+            print("Can only decrement valid numbers")
+            return 2
+        print(n - step)
+        return 0
+
+    return command.Command(
+            dec,
+            "decrement",
+            "decrement number [step]",
+            command.helpfmt("""
+                Decrement a number by 1 (default) or by a set step amount
+                """)
+            )
+

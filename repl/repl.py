@@ -837,6 +837,8 @@ class REPL:
         self.__add_builtin(math.make_less_than_command())
         self.__add_builtin(math.make_greater_than_command())
         self.__add_builtin(math.make_equal_command())
+        self.__add_builtin(math.make_increment_command())
+        self.__add_builtin(math.make_decrement_command())
 
     def __enable_debugging(self):
         self.__add_builtin(self.make_debug_command())
