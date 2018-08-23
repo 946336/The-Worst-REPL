@@ -170,10 +170,10 @@ REPL provides the following builtins by default:
     alias
     cat
     config
-    debug
     echo
     echoe
     env
+    exceptions
     exit
     false
     help
