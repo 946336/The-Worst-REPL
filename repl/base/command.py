@@ -16,6 +16,10 @@ class Command:
         return self.__callable(*args)
 
     @property
+    def callable(self):
+        return self.__callable
+
+    @property
     def name(self):
         return self.__name
 

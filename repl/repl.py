@@ -9,7 +9,7 @@ import itertools
 import atexit
 
 from .base import environment, command, syntax, common
-from .base import sink
+from .base import sink, callstack
 from .base.command import helpfmt
 
 from . import formatter
@@ -42,6 +42,9 @@ class REPL:
             self.__argspec = argspec
 
             self.__contents = []
+
+            self.args_ = None
+            self.argspec_ = None
 
         @property
         def name(self):
@@ -108,29 +111,40 @@ class REPL:
 
             return bindings
 
+        def shift(self):
+            self.args_ = self.args_[1:]
+            self.arspec_ = self.argspec_[1:]
+            bindings = self.make_bindings(self.args_, self.argspec_)
+
+            # Unset last argument
+            del self.bindings[str(len(self.args_))]
+            if self.argspec_:
+                del self.bindings[str(self.argspec_[-1])]
+
+            # Apply shift down
+            for k, v in bindings.items():
+                self.bindings[k] = v
+
         def __call__(self, *args):
             if self.__argspec and len(args) != len(self.__argspec):
                 raise common.REPLRuntimeError("Usage: {} {}"
                         .format(self.__name, " ".join(self.__argspec)))
 
-            argspec = self.__argspec[:]
+            self.argspec_ = self.__argspec[:]
+            self.args_ = args
 
-            bindings = self.make_bindings(args, argspec)
+            self.bindings = self.make_bindings(self.args_, self.argspec_)
 
             for line in self.__contents:
-
-                # Execution-time builtins
-                if line.strip().startswith("shift"):
-                    args = args[1:]
-                    arspec = argspec[1:]
-                    bindings = self.make_bindings(args, argspec)
-                    continue
-
                 try:
-                    res = self.__owner.eval(line, bindings)
+                    res = self.__owner.eval(line, self.bindings)
+                    self.__owner.stack_top().line_number += 1
                     if res: print(res.strip("\n"))
                 except common.REPLReturn as e:
                     return e.value
+                except common.REPLFunctionShift as e:
+                    self.shift()
+                    continue
 
     class Conditional:
         def __init__(self, owner, condition):
@@ -155,7 +169,12 @@ class REPL:
                     continue
 
                 for line in blk:
-                    res = self.__owner.eval(line)
+                    try:
+                        res = self.__owner.eval(line)
+                    except REPLFunctionShift as e:
+                        self.__owner.stack_top().obj.callable.shift()
+                        continue
+                        continue
                     if res: print(res.strip("\n"))
                 return
 
@@ -209,6 +228,9 @@ class REPL:
                     except common.REPLBreak as e:
                         broken = True
                         break
+                    except common.REPLFunctionShift as e:
+                        self.__owner.stack_top().obj.callable.shift()
+                        continue
                 self.__owner.eval(self.__condition)
 
         def append(self, line):
@@ -244,7 +266,7 @@ class REPL:
         self.__block_under_construction = []
 
         self.__execution_depth = 0
-        self.__call_stack = []
+        self.__call_stack = callstack.CallStack()
 
         self.__prompt = self.default_prompt
 
@@ -275,6 +297,7 @@ class REPL:
             # be tweaked by the user
             "help": self.__get_command_help,
             "time": self.__time,
+            "shift": self.__shift,
         }
 
         # REPL builtins
@@ -347,7 +370,7 @@ class REPL:
         self.__add_builtin(self.make_verbose_command())
         self.__add_builtin(self.make_modules_command())
         self.__add_builtin(self.make_undef_command())
-        self.__add_builtin(self.make_debug_command())
+        self.__add_builtin(self.make_exceptions_command())
         self.__add_builtin(self.make_true_command())
         self.__add_builtin(self.make_false_command())
         self.__add_builtin(self.make_not_command())
@@ -492,7 +515,6 @@ class REPL:
             self.__env = __env
 
         if isinstance(sys.stdin, StringIO): sys.stdin.close()
-        # if type(sys.stdin) == StringIO: sys.stdin.close()
         sys.stdin = self.__true_stdin
         return stdout
 
@@ -519,7 +541,7 @@ class REPL:
             return stdout
 
         command = self.lookup_command(command)
-        self.__call_stack.append(command.name)
+        self.__call_stack.append(callstack.Entry(command))
 
         if command is None:
             return ""
@@ -742,6 +764,9 @@ class REPL:
 
     complete_block = discard_block
 
+    def stack_top(self):
+        return self.__call_stack[-1]
+
     # If you find yourself wanting to edit this function, don't bother. That
     # means you're probably trying to ping-pong control between this module
     # and your own code, and you should probably do that manually. Just paste
@@ -765,15 +790,18 @@ class REPL:
                     sys.stderr.write("Cannot break when not executing a loop\n")
                 except common.REPLReturn as e:
                     sys.stderr.write("Cannot return from outside of function\n")
+                except common.REPLFunctionShift as e:
+                    sys.stderr.write("Cannot shift from outside of function\n")
                 except common.REPLError as e:
                     sys.stderr.write("{}\n".format(str(e)))
         except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
             print()
             return self
         except Exception as e: # Really?
-            sys.stderr.write("{}: {}\n.format"(str(type(e)), str(e)))
             if self.__debug: raise e
-            else: return self.go()
+            else:
+                sys.stderr.write("{}: {}\n.format"(str(type(e)), str(e)))
+                return self.go()
 
         return self
 
@@ -901,9 +929,8 @@ class REPL:
                 " ".join([str(bit) for bit in rest]
             ))))
 
-    def __break(self, *ignored):
+    def __break(self, _):
         raise common.REPLBreak()
-        return 0
 
     def __return(self, value):
         if not value: raise common.REPLReturn(None)
@@ -914,7 +941,10 @@ class REPL:
         self.__env.bind(self.__resultvar, str(value or 0))
         raise common.REPLReturn(str(value))
 
-    def __stop(self):
+    def __shift(self, _):
+        raise common.REPLFunctionShift()
+
+    def __stop(self, _):
         self.__done = True
         return 0
 
@@ -1298,35 +1328,35 @@ class REPL:
                     """)
         )
 
-    def make_debug_command(self):
+    def make_exceptions_command(self):
 
-        def debug(*args):
+        def exceptions(*args):
 
             if len(args) > 1:
                 sys.stderr.write("At most one subcommand expected\n")
                 return 2
 
             if len(args) == 0:
-                print(str(self.__debug))
+                print(str(self.__exceptions))
                 return 0
 
             state = args[0]
 
             if state.lower() == "on":
-                self.__debug = True
+                self.__exceptions = True
             elif state.lower() == "off":
-                self.__debug = False
+                self.__exceptions = False
             elif state.lower() == "toggle":
-                self.__debug = not self.__debug
+                self.__exceptions = not self.__exceptions
             else:
                 sys.stderr.write("Subcommand must be one of: on, off, toggle\n")
 
             return 0
 
         return command.Command(
-                debug,
-                "debug",
-                "debug [on, off, toggle]",
+                exceptions,
+                "exceptions",
+                "exceptions [on, off, toggle]",
                 helpfmt("""
                     Toggle or query debugging behavior. When on, most errors
                     stop the REPL and give a normal python stacktrace
@@ -1451,13 +1481,18 @@ class REPL:
                 # nested debugging sessions
                 if cmd in ["debug", "exit", "quit"]: break
                 elif cmd in ["stack", "backtrace", "bt", "where"]:
-                    sys.stderr.write("Showing stacktrace, most "
-                            + "recent call last:\n")
-                    sys.stderr.write("{}\n"
-                            .format("\n".join(self.__call_stack[:-1])))
+                    sys.stderr.write(str(self.__call_stack[:-1]))
                     continue
 
-                res = self.eval(cmd)
+                try:
+                    res = self.eval(cmd)
+                except common.REPLReturn as e:
+                    continue
+                except common.REPLBreak as e:
+                    continue
+                except common.REPLFunctionShift as e:
+                    continue
+
                 if res: sys.stderr.write(res.strip("\n") + "\n")
 
             return 0
