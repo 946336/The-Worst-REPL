@@ -62,11 +62,11 @@ class REPL:
 
             helpstring = \
                 ("function {}\n".format(self.__name)
-                + formatter.format(self.__contents) + "\nendfunction"
+                + formatter.format(self.__contents, depth = 1) + "\nendfunction"
                 if not self.__argspec else
                 "function {} {}\n".format(self.__name,
                     " ".join(self.__argspec))
-                + formatter.format(self.__contents) + "\nendfunction"
+                + formatter.format(self.__contents, depth = 1) + "\nendfunction"
                 )
 
             self.__owner.register_user_function(command.Command(

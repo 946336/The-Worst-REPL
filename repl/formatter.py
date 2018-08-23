@@ -15,15 +15,10 @@ dedent = [
         "done",
         ]
 
-def format(code, indent_size = 4):
+def format(code, depth = 0, indent_size = 4):
     if not code: return code
 
     formatted = []
-    depth = 0
-
-    if any([code[0].strip().startswith(keyword) for keyword in indent]):
-        depth += 1
-
     for line in code:
 
         if any([line.strip().startswith(keyword) for keyword in dedent]):
