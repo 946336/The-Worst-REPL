@@ -9,6 +9,7 @@ def commands():
             make_regex_match_command(),
             make_length_command(),
             make_devnull_command(),
+            make_strcmp_command(),
             ]
 
 def make_regex_capture_command():
@@ -93,4 +94,16 @@ def make_devnull_command():
             "devnull",
             "Accept input and do nothing with it"
             )
+
+def make_strcmp_command():
+    def strcmp(lhs, rhs):
+        return 0 if lhs == rhs else 1
+
+    return command.Command(
+            strcmp,
+            "strcmp",
+            "strcmp lhs rhs",
+            "Compare lhs and rhs for string equality"
+            )
+
 

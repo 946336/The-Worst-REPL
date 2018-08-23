@@ -1043,7 +1043,7 @@ class REPL:
     def make_set_command(self):
 
         def set(name, value):
-            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+            if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                 sys.stderr.write("Invalid identifier name\n")
                 return 2
 
@@ -1060,7 +1060,7 @@ class REPL:
     def make_unset_command(self):
 
         def unset(name):
-            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+            if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                 sys.stderr.write("Invalid identifier name\n")
                 return 2
 
@@ -1120,7 +1120,7 @@ class REPL:
                     return 1
 
                 name, value = args
-                if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                     sys.stderr.write("Invalid identifier name\n")
                     return 2
 
@@ -1132,7 +1132,7 @@ class REPL:
                     return 1
 
                 [name] = args
-                if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                     sys.stderr.write("Invalid identifier name\n")
                     return 2
 
@@ -1192,16 +1192,16 @@ class REPL:
         def slice(string, start, end):
             string = str(string)
             start = None if start == ":" else int(start)
-            end = None if stop == ":" else int(stop)
+            end = None if end == ":" else int(end)
 
             if start is None and end is None:
-                return string
+                print(string)
             elif start is None and end is not None:
-                return string[:end]
+                print(string[:end])
             elif end is None and start is not None:
-                return string[start:]
+                print(string[start:])
             else:
-                return string[start:end]
+                print(string[start:end])
 
         return command.Command(
                 slice,
@@ -1511,7 +1511,7 @@ class REPL:
 
     def make_setlocal_command(self):
         def setlocal(name, value):
-            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+            if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                 sys.stderr.write("Invalid identifier name\n")
                 return 2
             self.set_local(name, value)

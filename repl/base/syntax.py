@@ -42,12 +42,12 @@ class ExpandableString:
 
         """
         Identifiers match one of the following regexes:
-        $[A-Za-z_0-9?#@][A-Za-z0-9_]*
-        ${[A-Za-z_0-9?#@][A-Za-z0-9_]*}
+        $[A-Za-z_0-9?#@-][A-Za-z0-9_-]*
+        ${[A-Za-z_0-9?#@-][A-Za-z0-9_-]*}
         """
 
-        identifier = re.compile("([A-Za-z0-9_?#@][A-Z-a-z0-9_]*)")
-        identifier2 = re.compile("{([A-Za-z0-9_?#@][A-Za-z0-9_]*)}")
+        identifier = re.compile("([A-Za-z0-9_?#@-][A-Z-a-z0-9_-]*)")
+        identifier2 = re.compile("{([A-Za-z0-9_?#@-][A-Za-z0-9_-]*)}")
 
         for debris in exploded:
             if len(debris) == 0:

@@ -134,7 +134,7 @@ def make_greater_than_command():
 
 def make_equal_command():
     def eq(lhs, rhs):
-        return 0 if lhs == rhs else 1
+        return 0 if number(lhs) == number(rhs) else 1
 
     return command.Command(
             eq,
