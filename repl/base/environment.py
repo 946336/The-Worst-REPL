@@ -29,6 +29,9 @@ class Environment:
         if self.update_upstream(name, value) is None:
             self.__bindings[name] = value
 
+    def bind_here(self, name, value):
+        self.__bindings [name] = value
+
     # Return name of environment where binding was updated, or None if no
     # matching binding was found
     def update_upstream(self, name, value):
@@ -46,7 +49,7 @@ class Environment:
         if name in self.__bindings.keys():
             raise KeyError("Key {} already present in environment {}"
                     .format(name, self.__name))
-        self.bind(name, value)
+        self.bind_here(name, value)
 
     def unbind(self, name):
         try:

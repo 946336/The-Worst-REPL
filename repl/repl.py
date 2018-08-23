@@ -118,7 +118,7 @@ class REPL:
             for line in self.__contents:
 
                 # Execution-time builtins
-                if line == "shift":
+                if line.strip().startswith("shift"):
                     args = args[1:]
                     arspec = argspec[1:]
                     bindings = self.make_bindings(args, argspec)
@@ -241,7 +241,7 @@ class REPL:
 
         self.__block_under_construction = []
 
-        self.__execution_depth = 1
+        self.__execution_depth = 0
         self.__call_stack = []
 
         self.__prompt = self.default_prompt
@@ -331,6 +331,7 @@ class REPL:
         self.__add_builtin(self.make_unalias_command())
         self.__add_builtin(self.make_help_command())
         self.__add_builtin(self.make_set_command())
+        self.__add_builtin(self.make_setlocal_command())
         self.__add_builtin(self.make_unset_command())
         self.__add_builtin(self.make_exit_command())
         self.__add_builtin(self.make_source_command())
@@ -467,7 +468,7 @@ class REPL:
 
         # We can't do indiscriminate expansion before invoking keyword
         # expressions, because loops would become horribly unwieldy
-        bits = [bit.expand(bindings) for bit in bits]
+        bits = [syntax.expand(bit, bindings) for bit in bits]
 
         bits = self.expand_subshells(bits, with_bindings)
         bits = self.do_pipelines(bits, with_bindings)
@@ -498,8 +499,21 @@ class REPL:
         if self.__echo:
             quoted = [syntax.quote(argument) for argument in arguments if
                     argument]
-            self.stderr.write("{} {} {}\n".format("+" *
+            sys.stderr.write("{} {} {}\n".format("+" *
                 self.__execution_depth, command, " ".join(quoted)))
+
+        if command.strip() in self.__keywords:
+            out = sink.Wiretap()
+            if output_redirect:
+                out.join(output_redirect)
+            try:
+                with redirect_stdout(out):
+                    result = self.__keywords[command](arguments)
+            finally:
+                self.set(self.__resultvar, result)
+            stdout =  out.getvalue()
+            out.close()
+            return stdout
 
         command = self.lookup_command(command)
         self.__call_stack.append(command.name)
@@ -678,6 +692,10 @@ class REPL:
 
     def set(self, name, value):
         self.__env.bind(name, str(value))
+        return self
+
+    def set_local(self, name, value):
+        self.__env.bind_here(name, str(value))
         return self
 
     def get(self, name):
@@ -873,7 +891,7 @@ class REPL:
         if not value: raise common.REPLReturn(None)
 
         [value] = value
-        value = value.expand(self.__env)
+        value = syntax.expand(value, self.__env)
 
         self.__env.bind(self.__resultvar, str(value or 0))
         raise common.REPLReturn(str(value))
@@ -886,7 +904,7 @@ class REPL:
         if not name: return 1
 
         [name] = name
-        name = name.expand(self.__env)
+        name = syntax.expand(name, self.__env)
 
         command = self.lookup_command(str(name))
 
@@ -909,13 +927,16 @@ class REPL:
         return 0
 
     def __time(self, bits):
-        bits = [str(syntax.quote(bit.expand(self.__env))) for bit in bits]
+        bits = [str(syntax.quote(syntax.expand(bit, self.__env))) for bit
+                in bits]
         t0 = timeit.default_timer()
         res = self.eval(" ".join(bits))
         t1 = timeit.default_timer()
 
         if res: print(res.strip("\n"))
         print("Time elapsed: {:.4f}s".format(t1 - t0))
+
+        return self.get(self.__resultvar)
 
 # ========================================================================
 # REPL commands
@@ -1430,4 +1451,23 @@ class REPL:
             End a debugging session with the same command
             """)
         )
+
+    def make_setlocal_command(self):
+        def setlocal(name, value):
+            if not re.match("[a-zA-Z0-9_?][a-zA-Z0-9_]*", name):
+                sys.stderr.write("Invalid identifier name\n")
+                return 2
+            self.set_local(name, value)
+            return 0
+
+        return command.Command(
+                setlocal,
+                "set-local",
+                *command.helpfmt("""
+                    set-local name value
+                    """,
+                    """
+                    Set a variable in the current scope
+                    """)
+                )
 
