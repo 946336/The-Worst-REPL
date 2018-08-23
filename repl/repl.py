@@ -1205,16 +1205,20 @@ class REPL:
 
         def list(category):
             if category == "builtins":
-                print("\n".join(self.__builtins.keys()))
+                if self.__builtins:
+                    print("\n".join(self.__builtins.keys()))
                 return 0
             elif category == "basis":
-                print("\n".join(self.__basis.keys()))
+                if self.__basis:
+                    print("\n".join(self.__basis.keys()))
                 return 0
             elif category == "functions":
-                print("\n".join(self.__functions.keys()))
+                if self.__functions:
+                    print("\n".join(self.__functions.keys()))
                 return 0
             elif category == "aliases":
-                print("\n".join(self.__aliases.keys()))
+                if self.__aliases:
+                    print("\n".join(self.__aliases.keys()))
                 return 0
             elif category == "all":
                 builtins = ("\n".join(self.__builtins.keys()))
