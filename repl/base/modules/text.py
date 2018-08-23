@@ -2,6 +2,8 @@
 from .. import command
 import re
 
+import sys
+
 def commands():
     return [
             make_regex_capture_command(),
@@ -17,11 +19,13 @@ def make_regex_capture_command():
         pattern = re.compile(pattern)
         captures = []
         for string in strings:
-            match = pattern.search()
+            match = pattern.search(string)
             if not match:
                  continue
 
-            captures.append(" ".join(match.groups()))
+            if match.groups():
+                captures.append(" ".join([str(group) for group in
+                    match.groups() if group]))
 
         if captures: print("\n".join(captures))
         return 0 if captures else 1

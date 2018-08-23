@@ -223,7 +223,8 @@ You may not define nested functions.  Positional parameters are designated `$1`,
 arguments the function was given, and `$@` is the space-separated concatenation
 of all arguments.
 
-You may return a specific value by using the `return` command.
+You may return a specific value by using the `return` command, but you may not
+return the value of an expression.
 
 Inside a function, positional arguments are bound successively to `$1`, `$2`,
 etc. The function name is additionally  bound to `$FUNCTION`. `$#` and `shift`

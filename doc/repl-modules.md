@@ -60,3 +60,8 @@ to their python equivalents.
 Like `cat`, `devnull` accepts input. However, `devnull` silently discards the
 input it receives.
 
+    strcmp lhs rhs
+
+This does exactly what you think it does: it compares two strings for equality,
+returning success when they are equal
+

@@ -1,10 +1,22 @@
 
 echo Rule110 simulator:
-echo Use the rule110 command to run one generation of a pattern
-echo Use the do-rule110 command to run n generations of a pattern
-echo Use the help command for more details
+echo \t* Use the rule110 command to run one generation of a pattern.
+echo \t* Use the do-rule110 command to run n generations of a pattern.
+echo \t* Use the help command for more details.
+echo
+
+function is01 string
+    set-local capture `regex-capture "([01]*)" $string`
+    equal `length $string` `length $capture`
+    return $?
+endfunction
 
 function rule110 input
+    if not is01 $input
+        echoe Pattern can only consist of the characters 0 and 1
+        return 1
+    endif
+
     # We need mutability
     set-local pattern 00${input}00
     set-local newpattern ""
@@ -51,12 +63,17 @@ function do-rule110 pattern generations
     set-local i 0
     while less-than $i $generations
         set testpattern `rule110 $testpattern`
+        if equal `length $testpattern` 0
+            return
+        endif
         echo $testpattern
         set i `increment $i`
     done
 endfunction
 
 set testpattern 01101110
-echo running 10 generations on $testpattern
+echo running 10 generations on $testpattern:
+echo
 do-rule110 $testpattern 10
+echo
 

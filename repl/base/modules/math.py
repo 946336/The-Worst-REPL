@@ -141,7 +141,7 @@ def make_equal_command():
             "equal",
             "equal lhs rhs",
             command.helpfmt("""
-                Compare two things for equality
+                Compare two numbers for equality
                 """)
             )
 

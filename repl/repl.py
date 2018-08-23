@@ -171,7 +171,7 @@ class REPL:
                 for line in blk:
                     try:
                         res = self.__owner.eval(line)
-                    except REPLFunctionShift as e:
+                    except common.REPLFunctionShift as e:
                         self.__owner.stack_top().obj.callable.shift()
                         continue
                         continue
@@ -935,6 +935,9 @@ class REPL:
     def __return(self, value):
         if not value: raise common.REPLReturn(None)
 
+        if len(value) > 1:
+            raise common.REPLSyntaxError("Cannot return an expression")
+
         [value] = value
         value = syntax.expand(value, self.__env)
 
@@ -1394,7 +1397,10 @@ class REPL:
     def make_not_command(self):
 
         def _not(*expr):
-            self.eval(" ".join(expr))
+            if len(expr) == 0: raise REPLSyntaxError("not: expected expression")
+
+            res = self.execute(expr[0], expr[1:])
+            if res: print(res)
             return 1 if str(self.get("?")) == "0" else 0
 
         return command.Command(

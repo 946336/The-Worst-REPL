@@ -6,6 +6,7 @@ if __name__ == "__main__":
     repl.REPL(
         application_name = "Rule 110",
         modules_enabled = ["readline", "math", "text"],
-        dotfile_prefix = "rule110"
+        dotfile_prefix = "rule110",
+        debug = True
     ).go()
 

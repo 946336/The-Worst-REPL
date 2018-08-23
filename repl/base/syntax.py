@@ -137,7 +137,7 @@ def expand(string, bindings):
     if type(string) in [ExpandableString, NonExpandableString]:
         return string.expand(bindings)
     elif type(string) == str:
-        return string
+        return ExpandableString(string).expand(bindings)
     else: return string
 
 def is_string_type(s):
