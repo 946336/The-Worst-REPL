@@ -1,0 +1,62 @@
+
+echo Rule110 simulator:
+echo Use the rule110 command to run one generation of a pattern
+echo Use the do-rule110 command to run n generations of a pattern
+echo Use the help command for more details
+
+function rule110 input
+    # We need mutability
+    set-local pattern 00${input}00
+    set-local newpattern ""
+
+    set-local length `length $pattern`
+    set-local end `subtract $length 2`
+
+    set-local i 0
+    while less-than $i $end
+        set-local trigram-start $i
+        set-local trigram-end  `add $i 3`
+        set-local trigram `slice $pattern $trigram-start $trigram-end `
+
+        if strcmp $trigram 111
+            set-local newpattern ${newpattern}0
+        elif strcmp $trigram 110
+            set-local newpattern ${newpattern}1
+        elif strcmp $trigram 101
+            set-local newpattern ${newpattern}1
+        elif strcmp $trigram 100
+            set-local newpattern ${newpattern}0
+        elif strcmp $trigram 011
+            set-local newpattern ${newpattern}1
+        elif strcmp $trigram 010
+            set-local newpattern ${newpattern}1
+        elif strcmp $trigram 001
+            set-local newpattern ${newpattern}1
+        elif strcmp $trigram 000
+            set-local newpattern ${newpattern}0
+        endif
+
+        set-local i `increment $i`
+    done
+
+    if strcmp `slice $newpattern -3 :` 000
+        set-local newpattern `slice $newpattern : -2`
+    endif
+
+    echo $newpattern
+
+endfunction
+
+function do-rule110 pattern generations
+    set-local i 0
+    while less-than $i $generations
+        set testpattern `rule110 $testpattern`
+        echo $testpattern
+        set i `increment $i`
+    done
+endfunction
+
+set testpattern 01101110
+echo running 10 generations on $testpattern
+do-rule110 $testpattern 10
+

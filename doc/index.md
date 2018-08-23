@@ -34,11 +34,11 @@ If a variable `hello` is set, `$hello` will expand to its value.
     (test) >>> set hello there
     (test) >>> echo $hello
     there
-    (test) >>> set there ", there"
-    (test) >>> echo hello${there}
-    hello, there
+    (test) >>> set there ", there "
+    (test) >>> echo hello${there}user
+    hello, there user
 
-Variable names must match the following regex: `$[A-Za-z_0-9?#@][A-Za-z0-9_]*`
+Variable names must match the following regex: `$[A-Za-z_0-9?#@-][A-Za-z0-9_-]*`
 
 **Note:** Special variables
 
@@ -229,8 +229,8 @@ Inside a function, positional arguments are bound successively to `$1`, `$2`,
 etc. The function name is additionally  bound to `$FUNCTION`. `$#` and `shift`
 work much the same way as in bash.
 
-Unless assigning to a variable that was set in an enclosing scope, variables
-created inside of a function are function local.
+To avoid the risk of changing variables in an enclosing scope, use `set-local`
+to set variables within functions.
 
 If a function is declared with parameters, as below, then the arguments are
 available under the corresponding names, and REPL will not execute the
