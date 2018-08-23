@@ -2,6 +2,11 @@ from .. import command, syntax
 
 import subprocess
 
+def commands():
+    return [
+            make_shell_command(),
+            ]
+
 def make_shell_command():
 
     def shell(*args):

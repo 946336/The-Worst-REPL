@@ -2,6 +2,19 @@
 from .. import command
 import sys
 
+def commands():
+    return [
+            make_addition_command(),
+            make_subtraction_command(),
+            make_multiply_command(),
+            make_divide_command(),
+            make_less_than_command(),
+            make_greater_than_command(),
+            make_equal_command(),
+            make_increment_command(),
+            make_decrement_command()
+            ]
+
 def number(arg):
     if type(arg) in [int, float]:
         return arg

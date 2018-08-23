@@ -801,6 +801,9 @@ class REPL:
         self.__add_builtin(s)
         self.__add_alias("!", s.name)
 
+        for command in shell.commands():
+            self.__add_builtin(command) # We'll clobber, but that's fine
+
     def __enable_readline(self):
         try:
             import readline
@@ -830,15 +833,9 @@ class REPL:
             sys.stderr.write("Failed to import math module. Please check " +
                     "your installation\n")
             return
-        self.__add_builtin(math.make_addition_command())
-        self.__add_builtin(math.make_subtraction_command())
-        self.__add_builtin(math.make_multiply_command())
-        self.__add_builtin(math.make_divide_command())
-        self.__add_builtin(math.make_less_than_command())
-        self.__add_builtin(math.make_greater_than_command())
-        self.__add_builtin(math.make_equal_command())
-        self.__add_builtin(math.make_increment_command())
-        self.__add_builtin(math.make_decrement_command())
+
+        for command in math.commands():
+            self.__add_builtin(command)
 
     def __enable_debugging(self):
         self.__add_builtin(self.make_debug_command())
