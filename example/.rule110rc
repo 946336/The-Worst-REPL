@@ -66,14 +66,15 @@ function do-rule110 pattern generations
         if equal `length $testpattern` 0
             return
         endif
-        echo $testpattern
+        echoe $testpattern
         set i `increment $i`
     done
 endfunction
 
 set testpattern 01101110
-echo running 10 generations on $testpattern:
+set generations 25
+echo running $generations generations on $testpattern:
 echo
-do-rule110 $testpattern 10
+do-rule110 $testpattern $generations
 echo
 
