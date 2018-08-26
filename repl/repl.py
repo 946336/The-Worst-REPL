@@ -135,17 +135,21 @@ class REPL:
 
             self.bindings = self.make_bindings(self.args_, self.argspec_)
 
-            for line in self.__contents:
-                try:
-                    # sys.stderr.write(str(self.bindings) + "\n")
-                    res = self.__owner.eval(line, self.bindings)
-                    self.__owner.stack_top().line_number += 1
-                    if res: print(res.strip("\n"))
-                except common.REPLReturn as e:
-                    return e.value
-                except common.REPLFunctionShift as e:
-                    self.shift()
-                    continue
+            self.__owner.add_scope(self.bindings, self.__name)
+
+            try:
+                for line in self.__contents:
+                    try:
+                        res = self.__owner.eval(line)
+                        self.__owner.stack_top().line_number += 1
+                        if res: print(res.strip("\n"))
+                    except common.REPLReturn as e:
+                        return e.value
+                    except common.REPLFunctionShift as e:
+                        self.shift()
+                        continue
+            finally:
+                self.__owner.pop_scope()
 
     class Conditional:
         def __init__(self, owner, condition):
@@ -469,7 +473,7 @@ class REPL:
     def get_scope(self, index = -1):
         return self.__env
 
-    def eval(self, string, with_bindings = None):
+    def eval(self, string):
         """
         Unless the command is backslashed, lookup order is:
             * aliases
@@ -493,42 +497,23 @@ class REPL:
             bits = syntax.split_whitespace(string)
         except common.REPLSyntaxError as e:
             sys.stderr.write("Syntax error: {}\n".format(e))
-            self.__env.bind(self.__resultvar, "2")
+            self.set(self.__resultvar, "2")
             return ""
 
-        __env = self.__env
-        bindings = self.__env
-        # Oof. This breaks locals persistence of local variables
-        # __env = self.__env.copy()
-        # bindings = self.__env.copy()
-        if with_bindings is not None:
-            e = environment.Environment(name = bits[0],
-                    upstream = self.__env, initial_bindings = with_bindings)
-            bindings = e
-
         if str(bits[0]) in self.__keywords:
-            self.__env = bindings
             result = None
             try:
                 result = self.__keywords[str(bits[0])](bits[1:])
             finally:
-                __env.bind(self.__resultvar, str(result or 0))
-                self.__env = __env
+                self.set(self.__resultvar, result or 0)
             return ""
 
         # We can't do indiscriminate expansion before invoking keyword
         # expressions, because loops would become horribly unwieldy
-        bits = [syntax.expand(bit, bindings) for bit in bits]
+        bits = [syntax.expand(bit, self.__env) for bit in bits]
 
-        self.__env = bindings
-        try:
-            # bits = self.expand_subshells(bits)
-            # bits = self.do_pipelines(bits)
-
-            bits = self.expand_subshells(bits, with_bindings)
-            bits = self.do_pipelines(bits, with_bindings)
-        finally:
-            self.__env = __env
+        bits = self.expand_subshells(bits)
+        bits = self.do_pipelines(bits)
 
         if len(bits) == 0:
             return ""
@@ -539,11 +524,7 @@ class REPL:
         elif len(bits) > 1:
             command, arguments = bits[0], bits[1:]
 
-        self.__env = bindings
-        try:
-            stdout = self.execute(command, arguments)
-        finally:
-            self.__env = __env
+        stdout = self.execute(command, arguments)
 
         if isinstance(sys.stdin, StringIO): sys.stdin.close()
         sys.stdin = self.__true_stdin
@@ -584,11 +565,11 @@ class REPL:
         try:
             with redirect_stdout(out):
                 result = command(*arguments)
-                self.__env.bind(self.__resultvar, str(result or 0))
+                self.set(self.__resultvar, result or 0)
         except TypeError as e:
             sys.stderr.write("(Error) {}\n".format(command.usage))
             if self.__debug: raise e
-            self.__env.bind(self.__resultvar, str(255))
+            self.set(self.__resultvar, 255)
         finally:
             self.__execution_depth -= 1
             self.__call_stack.pop()
@@ -598,7 +579,7 @@ class REPL:
 
         return stdout
 
-    def do_pipelines(self, bits, with_bindings = None):
+    def do_pipelines(self, bits):
         if not any(["|" in bit for bit in bits]): return bits
 
         piped = [list(group) for k, group
@@ -611,24 +592,10 @@ class REPL:
             stdin = self.__true_stdin
             out = None
             for command in piped:
-
-                __env = self.__env
-                bindings = self.__env
-                if with_bindings is not None:
-                    e = environment.Environment(name = command,
-                            upstream = self.__env,
-                            initial_bindings = with_bindings)
-                    bindings = e
-
                 command = self.expand_subshells(command, with_bindings)
 
                 out = StringIO()
-                self.__env = bindings
-                try:
-                    self.execute(command[0], command[1:], out)
-                finally:
-                    self.__env = __env
-                    pass
+                self.execute(command[0], command[1:], out)
                 stdin = out
 
                 sys.stdin = stdin
@@ -636,7 +603,7 @@ class REPL:
 
         return bits
 
-    def expand_subshells(self, bits, with_bindings = None):
+    def expand_subshells(self, bits):
         # Handling subshell expansion
         if len([tick for tick in bits if tick == "`"]) % 2 != 0:
             raise common.REPLSyntaxError("Error: Unmatched `")
@@ -651,24 +618,11 @@ class REPL:
             if bit == "`":
                 if subshell: # Closing a subshell command
                     if len(accumulator) > 0:
-                        __env = self.__env
-                        bindings = self.__env
-                        if with_bindings is not None:
-                            e = environment.Environment(name = accumulator[0],
-                                    upstream = self.__env,
-                                    initial_bindings = with_bindings)
-                            bindings = e
 
-                        accumulator = self.do_pipelines(accumulator,
-                                with_bindings)
+                        accumulator = self.do_pipelines(accumulator)
 
-                        self.__env = bindings
-                        try:
-                            fresh_bits.append(self.execute(accumulator[0],
-                                accumulator[1:]).rstrip("\n"))
-                        finally:
-                            self.__env = __env
-                            pass
+                        fresh_bits.append(self.execute(accumulator[0],
+                            accumulator[1:]).rstrip("\n"))
 
                     accumulator = []
                 else: # Starting a subshell command
@@ -1554,9 +1508,6 @@ class REPL:
             if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                 sys.stderr.write("Invalid identifier name\n")
                 return 2
-            sys.stderr.write("Setting {} -> {} in {}\n".format(
-                name, value, self.__env.name
-                ))
             self.set_local(name, value)
             return 0
 
