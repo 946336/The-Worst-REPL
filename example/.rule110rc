@@ -62,12 +62,12 @@ endfunction
 function do-rule110 pattern generations
     set-local i 0
     while less-than $i $generations
-        set testpattern `rule110 $testpattern`
+        set-local testpattern `rule110 $testpattern`
         if equal `length $testpattern` 0
             return
         endif
         echoe $testpattern
-        set i `increment $i`
+        set-local i `increment $i`
     done
 endfunction
 
