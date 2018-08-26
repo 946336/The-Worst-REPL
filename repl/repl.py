@@ -597,7 +597,7 @@ class REPL:
             stdin = self.__true_stdin
             out = None
             for command in piped:
-                command = self.expand_subshells(command, with_bindings)
+                command = self.expand_subshells(command)
 
                 out = StringIO()
                 self.execute(command[0], command[1:], out)
