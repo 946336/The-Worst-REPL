@@ -15,6 +15,14 @@ class Command:
     def __call__(self, *args):
         return self.__callable(*args)
 
+    def copy(self):
+        return Command(
+            callable = self.__callable,
+            name = self.__name,
+            usage = self.__usage,
+            helptext = self.__helptext
+        )
+
     @property
     def callable(self):
         return self.__callable

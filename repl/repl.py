@@ -137,6 +137,7 @@ class REPL:
 
             for line in self.__contents:
                 try:
+                    # sys.stderr.write(str(self.bindings) + "\n")
                     res = self.__owner.eval(line, self.bindings)
                     self.__owner.stack_top().line_number += 1
                     if res: print(res.strip("\n"))
@@ -173,7 +174,6 @@ class REPL:
                         res = self.__owner.eval(line)
                     except common.REPLFunctionShift as e:
                         self.__owner.stack_top().obj.callable.shift()
-                        continue
                         continue
                     if res: print(res.strip("\n"))
                 return
@@ -267,6 +267,7 @@ class REPL:
 
         self.__execution_depth = 0
         self.__call_stack = callstack.CallStack()
+        self.__scope_stack = []
 
         self.__prompt = self.default_prompt
 
@@ -449,6 +450,25 @@ class REPL:
         self.__prompt = prompt_callable
         return self
 
+    def add_scope(self, initial_bindings = None, name = ""):
+        self.__scope_stack.append(self.__env)
+        self.__env = environment.Environment(
+                name = name,
+                upstream = self.__env,
+                initial_bindings = initial_bindings,
+                )
+        return self
+
+    def pop_scope(self):
+        if len(self.__scope_stack) <= 0: return None
+        last = self.__scope_stack[-1]
+        self.__env = last
+        self.__scope_stack.pop()
+        return last
+
+    def get_scope(self, index = -1):
+        return self.__env
+
     def eval(self, string, with_bindings = None):
         """
         Unless the command is backslashed, lookup order is:
@@ -478,6 +498,9 @@ class REPL:
 
         __env = self.__env
         bindings = self.__env
+        # Oof. This breaks locals persistence of local variables
+        # __env = self.__env.copy()
+        # bindings = self.__env.copy()
         if with_bindings is not None:
             e = environment.Environment(name = bits[0],
                     upstream = self.__env, initial_bindings = with_bindings)
@@ -490,14 +513,22 @@ class REPL:
                 result = self.__keywords[str(bits[0])](bits[1:])
             finally:
                 __env.bind(self.__resultvar, str(result or 0))
+                self.__env = __env
             return ""
 
         # We can't do indiscriminate expansion before invoking keyword
         # expressions, because loops would become horribly unwieldy
         bits = [syntax.expand(bit, bindings) for bit in bits]
 
-        bits = self.expand_subshells(bits, with_bindings)
-        bits = self.do_pipelines(bits, with_bindings)
+        self.__env = bindings
+        try:
+            # bits = self.expand_subshells(bits)
+            # bits = self.do_pipelines(bits)
+
+            bits = self.expand_subshells(bits, with_bindings)
+            bits = self.do_pipelines(bits, with_bindings)
+        finally:
+            self.__env = __env
 
         if len(bits) == 0:
             return ""
@@ -597,6 +628,7 @@ class REPL:
                     self.execute(command[0], command[1:], out)
                 finally:
                     self.__env = __env
+                    pass
                 stdin = out
 
                 sys.stdin = stdin
@@ -636,6 +668,7 @@ class REPL:
                                 accumulator[1:]).rstrip("\n"))
                         finally:
                             self.__env = __env
+                            pass
 
                     accumulator = []
                 else: # Starting a subshell command
@@ -666,7 +699,8 @@ class REPL:
         for env in envs:
             value = env.get(name, None)
             if value is not None:
-                return value
+                return value.copy()
+                # return value
 
         return self.__make_unknown_command(name)
 
@@ -929,7 +963,7 @@ class REPL:
                 " ".join([str(bit) for bit in rest]
             ))))
 
-    def __break(self, _):
+    def __break(self, *_):
         raise common.REPLBreak()
 
     def __return(self, value):
@@ -944,10 +978,10 @@ class REPL:
         self.__env.bind(self.__resultvar, str(value or 0))
         raise common.REPLReturn(str(value))
 
-    def __shift(self, _):
+    def __shift(self, *_):
         raise common.REPLFunctionShift()
 
-    def __stop(self, _):
+    def __stop(self, *_):
         self.__done = True
         return 0
 
@@ -1520,6 +1554,9 @@ class REPL:
             if not re.match("[a-zA-Z0-9_?-][a-zA-Z0-9_-]*", name):
                 sys.stderr.write("Invalid identifier name\n")
                 return 2
+            sys.stderr.write("Setting {} -> {} in {}\n".format(
+                name, value, self.__env.name
+                ))
             self.set_local(name, value)
             return 0
 

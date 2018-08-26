@@ -30,7 +30,8 @@ def make_addition_command():
         try:
             print(str(number(lhs) + number(rhs)))
         except ValueError as e:
-            print("Can only add valid numbers")
+            sys.stderr.write("Can only add valid numbers\n")
+            sys.stderr.write("{} + {}\n".format(lhs, rhs))
             return 2
         return 0
 
@@ -47,7 +48,7 @@ def make_subtraction_command():
         try:
             print(str(number(lhs) - number(rhs)))
         except ValueError as e:
-            print("Can only subtract valid numbers")
+            sys.stderr.write("Can only subtract valid numbers\n")
             return 2
         return 0
 
@@ -64,7 +65,7 @@ def make_multiply_command():
         try:
             print(str(number(lhs) * number(rhs)))
         except ValueError as e:
-            print("Can only multiply valid numbers")
+            sys.stderr.write("Can only multiply valid numbers\n")
             return 2
         return 0
 
@@ -81,7 +82,7 @@ def make_divide_command():
         try:
             print(str(number(lhs) / number(rhs)))
         except ValueError as e:
-            print("Can only divide valid numbers")
+            sys.stderr.write("Can only divide valid numbers\n")
             return 2
         return 0
 
@@ -98,7 +99,7 @@ def make_less_than_command():
             lhs = number(lhs)
             rhs = number(rhs)
         except ValueError as e:
-            print("Both operands must be numbers")
+            sys.stderr.write("Both operands must be numbers\n")
             return 2
 
         return 0 if lhs < rhs else 1
@@ -118,7 +119,7 @@ def make_greater_than_command():
             lhs = number(lhs)
             rhs = number(rhs)
         except ValueError as e:
-            print("Both operands must be numbers")
+            sys.stderr.write()("Both operands must be numbers\n")
             return 2
 
         return 0 if lhs > rhs else 1
@@ -150,7 +151,7 @@ def make_increment_command():
         try:
             n = number(n)
         except ValueError as e:
-            print("Can only increment valid numbers")
+            sys.stderr.write("Can only increment valid numbers\n")
             return 2
         print(n + step)
         return 0
@@ -169,7 +170,7 @@ def make_decrement_command():
         try:
             n = number(n)
         except ValueError as e:
-            print("Can only decrement valid numbers")
+            sys.stderr.write("Can only decrement valid numbers\n")
             return 2
         print(n - step)
         return 0
