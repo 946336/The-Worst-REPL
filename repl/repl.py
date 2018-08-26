@@ -39,7 +39,8 @@ class REPL:
         def __init__(self, owner, name, argspec = None):
             self.__name = name
             self.__owner = owner
-            self.__argspec = argspec
+            self.__variadic = argspec[-1] == "..."
+            self.__argspec = argspec[:-1] if self.__variadic else argspec
 
             self.__contents = []
 
@@ -113,7 +114,7 @@ class REPL:
 
         def shift(self):
             self.args_ = self.args_[1:]
-            self.arspec_ = self.argspec_[1:]
+            self.argspec_ = self.argspec_[1:]
             bindings = self.make_bindings(self.args_, self.argspec_)
 
             # Unset last argument
@@ -125,8 +126,15 @@ class REPL:
             for k, v in bindings.items():
                 self.bindings[k] = v
 
+        def calledIncorrectly(self, args):
+            if not self.__argspec: return False
+            if self.__variadic:
+                return len(args) < len(self.__argspec)
+            else:
+                return len(args) != len(self.__argspec)
+
         def __call__(self, *args):
-            if self.__argspec and len(args) != len(self.__argspec):
+            if self.calledIncorrectly(args):
                 raise common.REPLRuntimeError("Usage: {} {}"
                         .format(self.__name, " ".join(self.__argspec)))
 
