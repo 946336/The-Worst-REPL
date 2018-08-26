@@ -5,8 +5,7 @@ class Entry:
         self.line_number = line_number
 
     def __repr__(self):
-        return "{}:{} ({}) ".format(self.obj.name, self.line_number,
-                id(self.obj.callable))
+        return "{}:{}".format(self.obj.name, self.line_number)
 
 class CallStack:
     def __init__(self, initial = None):

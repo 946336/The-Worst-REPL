@@ -269,7 +269,7 @@ class REPL:
 
         self.__block_under_construction = []
 
-        self.__execution_depth = 0
+        self.__execution_depth = 1
         self.__call_stack = callstack.CallStack()
         self.__scope_stack = []
 
@@ -288,8 +288,8 @@ class REPL:
 
         self.__env = environment.Environment(self.name, upstream =
                 self.__config_env if not noenv else None, default_value = "")
-        self.__env.bind(self.__resultvar, "0")
-        self.__env.bind("0", self.__name)
+        self.set(self.__resultvar, "0")
+        self.set("0", self.__name)
 
         self.__keywords = {
             "function": self.__start_function,
@@ -473,6 +473,14 @@ class REPL:
     def get_scope(self, index = -1):
         return self.__env
 
+    def __make_call(self, command):
+        self.__execution_depth += 1
+        self.__call_stack.append(callstack.Entry(command))
+
+    def __end_call(self):
+        self.__execution_depth -= 1
+        self.__call_stack.pop()
+
     def eval(self, string):
         """
         Unless the command is backslashed, lookup order is:
@@ -531,8 +539,6 @@ class REPL:
         return stdout
 
     def execute(self, command, arguments, output_redirect = None):
-        self.__execution_depth += 1
-
         if self.__echo:
             quoted = [syntax.quote(argument) for argument in arguments if
                     argument]
@@ -553,7 +559,7 @@ class REPL:
             return stdout
 
         command = self.lookup_command(command)
-        self.__call_stack.append(callstack.Entry(command))
+        self.__make_call(command)
 
         if command is None:
             return ""
@@ -571,8 +577,7 @@ class REPL:
             if self.__debug: raise e
             self.set(self.__resultvar, 255)
         finally:
-            self.__execution_depth -= 1
-            self.__call_stack.pop()
+            self.__end_call()
 
         stdout = out.getvalue()
         out.close()
@@ -654,7 +659,6 @@ class REPL:
             value = env.get(name, None)
             if value is not None:
                 return value.copy()
-                # return value
 
         return self.__make_unknown_command(name)
 
@@ -882,14 +886,14 @@ class REPL:
     def __start_function(self, rest):
         if len(rest) == 0:
             sys.stderr.write("Function must have a name\n")
-            self.__env.bind("?", "2")
+            self.set("?", "2")
             return
 
         name, argspec = rest[0], rest[1:]
 
         if name in REPL.REPLFunction.forbidden_names:
             sys.stderr.write("{} is a reserved word\n".format(name))
-            self.__env.bind("?", "3")
+            self.set("?", "3")
             return
 
         self.__block_under_construction.append(self.REPLFunction(self,
@@ -898,7 +902,7 @@ class REPL:
     def __start_loop(self, rest):
         if len(rest) == 0:
             sys.stderr.write("Loop must have condition\n")
-            self.__env.bind("?", "2")
+            self.set("?", "2")
             return
 
         self.__block_under_construction.append(self.Loop(self,
@@ -909,7 +913,7 @@ class REPL:
     def __start_conditional(self, rest):
         if len(rest) == 0:
             stys.stderr.write("Conditional block must have predicate\n")
-            self.__env.bind("?", "3")
+            self.set("?", "3")
             return
 
         self.__block_under_construction.append(self.Conditional(self,
@@ -929,7 +933,7 @@ class REPL:
         [value] = value
         value = syntax.expand(value, self.__env)
 
-        self.__env.bind(self.__resultvar, str(value or 0))
+        self.set(self.__resultvar, value or 0)
         raise common.REPLReturn(str(value))
 
     def __shift(self, *_):
