@@ -235,8 +235,9 @@ to set variables within functions.
 
 If a function is declared with parameters, as below, then the arguments are
 available under the corresponding names, and REPL will not execute the
-function unless exactly that many arguments are supplied. For these functions,
-`shift` incrementally unsets parameters starting from the first.
+function unless exactly that many arguments are supplied. For these named
+parameters, `shift` incrementally unsets parameters starting from the first.
+Note that the numbered positionals will still be unset from the end.
 
     (test) >>> function quote str
     (test/quote) ... echo "'$str'"

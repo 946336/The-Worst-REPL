@@ -119,7 +119,7 @@ class REPL:
             # Unset last argument
             del self.bindings[str(len(self.args_))]
             if self.argspec_:
-                del self.bindings[str(self.argspec_[-1])]
+                del self.bindings[str(self.argspec_[0])]
 
             # Apply shift down
             for k, v in bindings.items():
