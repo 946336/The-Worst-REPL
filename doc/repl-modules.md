@@ -63,5 +63,5 @@ input it receives.
     strcmp lhs rhs
 
 This does exactly what you think it does: it compares two strings for equality,
-returning success when they are equal
+returning success if they are equal
 

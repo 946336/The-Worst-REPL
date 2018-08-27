@@ -2,8 +2,11 @@
 import inspect, textwrap
 
 class Command:
-    def __init__(self, callable, name = "", usage = "", helptext = ""):
-        self.__callable = callable
+    def __init__(self, callable_, name = "", usage = "", helptext = ""):
+        if not callable(callable_):
+            raise TypeError("Command requires callable object")
+
+        self.__callable = callable_
 
         # This is nasty with lambda functions
         self.__name = name if name else callable.__name__
@@ -17,7 +20,7 @@ class Command:
 
     def copy(self):
         return Command(
-            callable = self.__callable,
+            callable_ = self.__callable,
             name = self.__name,
             usage = self.__usage,
             helptext = self.__helptext

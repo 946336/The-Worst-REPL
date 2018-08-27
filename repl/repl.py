@@ -39,7 +39,7 @@ class REPL:
         def __init__(self, owner, name, argspec = None):
             self.__name = name
             self.__owner = owner
-            self.__variadic = argspec[-1] == "..."
+            self.__variadic = argspec[-1] == "..." if argspec else False
             self.__argspec = argspec[:-1] if self.__variadic else argspec
 
             self.__contents = []
@@ -291,6 +291,9 @@ class REPL:
         self.__escapechar = "\\"
         self.__resultvar = "?"
 
+        self.__eval_hook = None
+        self.__exec_hook = None
+
         if not noenv:
             self.__config_env = environment.Environment(self.name + "-env",
                     upstream = upstream_environment, default_value = "")
@@ -433,6 +436,7 @@ class REPL:
                 + list(self.__functions.keys())
                 + list(self.__basis.keys())
                 + list(self.__builtins.keys())
+                + list(self.__keywords.keys())
         )
 
         if len(text) > 0 and text[0] == "\\":
@@ -549,6 +553,10 @@ class REPL:
 
         if isinstance(sys.stdin, StringIO): sys.stdin.close()
         sys.stdin = self.__true_stdin
+
+        if self.__eval_hook:
+            self.__eval_hook(string, stdout, self.get("?"))
+
         return stdout
 
     def execute(self, command, arguments, output_redirect = None):
@@ -594,6 +602,9 @@ class REPL:
 
         stdout = out.getvalue()
         out.close()
+
+        if self.__exec_hook:
+            self.__exec_hook(command.name, arguments, stdout, self.get("?"))
 
         return stdout
 
@@ -737,6 +748,16 @@ class REPL:
 
     def loaded_modules(self):
         return self.__modules_loaded
+
+    def set_eval_hook(self, callable_):
+        if not callable(callable_):
+            raise TypeError("eval hook must be callable")
+        self.__eval_hook = callable_
+
+    def set_exec_hook(self, callable_):
+        if not callable(callable_):
+            raise TypeError("exec hook must be callable")
+        self.__exec_hook = callable_
 
     def set_unknown_command(self, command_factory):
         if isinstance(command_factory(""), command.Command):
@@ -1517,6 +1538,7 @@ class REPL:
             Interrupt the REPL and allow the user to interactively enter
             commands, and then resume.
             End a debugging session with the same command
+            View a stacktrace with `stack`
             """)
         )
 

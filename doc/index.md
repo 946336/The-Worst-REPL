@@ -157,10 +157,10 @@ taking place.
 
 #### Configurable dotfile name for startup
 
-REPL uses dotfiles for startup configuration. Which dotfile is used depends on
-the name given to the REPL. For example, if the REPL is given the name "test",
-the file `.replrc` will be used as the dotfile. Dotfiles are sourced before
-control is returned to the user.
+REPL uses dotfiles for startup configuration. Which dotfile is used by default
+depends on the name given to the REPL, but the filename can be overridden. For
+example, if the REPL is given the name "test", the file `.testrc` will be used
+as the dotfile. Dotfiles are sourced before control is returned to the user.
 
 ## Builtins
 
@@ -303,7 +303,6 @@ At this time, the only debugging tool provided is the ability to see a
 rudimentary stacktrace, using any of the `stack`, `backtrace`, `bt`, or `where`
 commands in a debug session.
 
-    (test) >>> function aFunction
     (test) >>> function a
     (test/a) ... debug
     (test/a) ... endfunction
@@ -315,10 +314,10 @@ commands in a debug session.
     (test/c) ... endfunction
     (test) >>> c
     DEBUG >>> stack
-    Showing stacktrace, most recent call last:
-    c
-    b
-    a
+    Traceback (Most recent call last):
+    c:0
+    b:0
+    a:0
 
 ## Timing
 

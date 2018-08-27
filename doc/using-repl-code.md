@@ -41,9 +41,10 @@ class Command:
   internal help system.
 
 Usually, a `Command` will be registered to a REPL using `REPL.register()`.
-This will register the new command as a user-level function. Currently, if you
-wish to add your own builtins or basis to REPL, you must clone or fork this
-project and modify that copy instead.
+This will register the new command as part of the basis of your application. If
+you prefer to register the command as a user-level function, use
+`REPL.register_user_function()` instead. The only functional difference is that
+the user can overwrite user-level commands.
 
 Keep in mind that `callable` can itself be a thin wrapper serving as an
 adaptor between the function signature required by REPL and the original
@@ -56,7 +57,7 @@ them blank.
 ## Interacting with REPL programmatically
 
 It is almost certain that your program will at some point want to interact
-with the REPL that the end user is using. REPL allows you to query the
+with the REPL that the end user is using. REPL allows you to query at least the
 following:
 
 * The name of the REPL: `REPL.name`
@@ -66,13 +67,13 @@ following:
 * Whether or not REPL will echo executed commands: `REPL.echo`
 * The names of enabled modules
 
-REPL also allows you to make the following types of changes after
+REPL also allows you to make at least the following changes after
 initialization:
 
 * You may replace the prompt callback: `REPL.set_prompt()`
 * You may register additional commands to the basis: `REPL.register()`
 * You may set the values of environment variables: `REPL.set()`
-* You may register a new command: `REPL.register()`
+* You may register a new command: `REPL.register_user_function()`
 * You may remove a function: `REPL.unregister()`
 * You may source scripts: `REPL.source()`
 * You may toggle whether or not REPL will echo the commands it executes:
@@ -82,8 +83,8 @@ initialization:
 
 While not prohibited, it is possible to leverage `REPL.eval()` and other
 related functions to indirectly execute arbitrary REPL without informing the
-user. This is not recommended, and a responsible developer will find another
-way to accomplish the same task.
+user. This is not recommended, and the responsible developer will find another
+way to accomplish the same task when possible.
 
 ## REPL.set\_unknown\_command()
 
@@ -109,7 +110,11 @@ documentation](repl-modules.md)
 
 Current modules are:
 
+* debug
+* math
+* readline
 * shell
+* text
 
 ## Advanced Usage
 
@@ -120,30 +125,57 @@ application-specific logic into the limited callback space REPL provides.
 
 ```python
 # class REPL:
-    def go(self):
-        try:
-            while not self.done:
-                try:
-                    self.eval(input(self.prompt).strip("\n"))
-                except common.REPLError as e:
-                    print(e)
-                except TypeError as e: # Bad command invocation
-                    print(e)
-        except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
-            print()
-            return
-        except Exception as e: # Attempt to keep running
-            print(e)
-            self.go
+def go(self):
+    try:
+        while not self.done:
+            try:
+                print(self.eval(input(self.prompt).strip("\n")), end = "")
+            except TypeError as e:
+                sys.stderr.write("TypeError: " + str(e) + "\n")
+                if self.__debug: raise e
+            except RecursionError as e:
+                sys.stderr.write("Maximum recursion depth exceeded\n")
+                if self.__debug: raise e
+            except common.REPLBreak as e:
+                sys.stderr.write("Cannot break when not executing a loop\n")
+            except common.REPLReturn as e:
+                sys.stderr.write("Cannot return from outside of function\n")
+            except common.REPLFunctionShift as e:
+                sys.stderr.write("Cannot shift from outside of function\n")
+            except common.REPLError as e:
+                sys.stderr.write("{}\n".format(str(e)))
+    except (KeyboardInterrupt, EOFError) as e: # Exit gracefully
+        print()
+        return self
+    except Exception as e:
+        if self.__debug: raise e
+        else:
+            sys.stderr.write("{}: {}\n.format"(str(type(e)), str(e)))
+            return self.go()
+
+    return self
 ```
 
 In particular, if any task needs to be carried out between successive command
 invocations, that is a strong case to forgo the provided main loop and to roll
 your own.
 
-**Note**
+## Hooks
+
+REPL provides two hooks: one for `eval` and one for `exec`.
+
+The `eval` hook is invoked once when REPL successfully evaluates a line of
+input. It receives the following arguments: the string that was evaluated, the
+output it produced, and the result returned.
+
+    self.__eval_hook(string, stdout, self.get("?"))
 
 If you _really_ want to hook into _every single_ command invocation, including
 each part of a pipeline or command substitution, you need to hook
-`REPL.execute()` instead.
+`REPL.execute()` instead. The `exec` hook is invoked once when REPL successfully
+executes a command. It receives the following arguments: the name of the command
+executed, a list of the arguments to that command, the output it produced, and
+the result returned.
+
+    self.__exec_hook(command.name, arguments, stdout, self.get("?"))
 
