@@ -106,13 +106,13 @@ class REPL:
             for position, argument in enumerate(args):
                 bindings[str(position + 1)] = argument
 
-            if argspec:
-                for name in argspec:
-                    bindings[name] = argument
+            for name, argument in zip(argspec, args):
+                bindings[name] = argument
 
             return bindings
 
         def shift(self):
+            sys.stderr.write("Shifting\n")
             self.args_ = self.args_[1:]
 
             to_unset = None
