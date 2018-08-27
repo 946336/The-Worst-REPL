@@ -112,7 +112,6 @@ class REPL:
             return bindings
 
         def shift(self):
-            sys.stderr.write("Shifting\n")
             self.args_ = self.args_[1:]
 
             to_unset = None
