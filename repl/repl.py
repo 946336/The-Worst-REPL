@@ -114,13 +114,18 @@ class REPL:
 
         def shift(self):
             self.args_ = self.args_[1:]
-            self.argspec_ = self.argspec_[1:]
+
+            to_unset = None
+            if len(self.args_) < len(self.argspec_):
+                to_unset = self.argspec_[0]
+                self.argspec_ = self.argspec_[1:]
+
             bindings = self.make_bindings(self.args_, self.argspec_)
 
             # Unset last argument
             del self.bindings[str(len(self.args_))]
-            if self.argspec_:
-                del self.bindings[str(self.argspec_[0])]
+            if to_unset:
+                del self.bindings[str(to_unset)]
 
             # Apply shift down
             for k, v in bindings.items():
