@@ -12,7 +12,9 @@ from .base import environment, command, syntax, common
 from .base import sink, callstack
 from .base.command import helpfmt
 
-from . import formatter
+from .Function import REPLFunction
+from .Conditional import Conditional
+from .Loop import Loop
 
 def make_unknown_command(name):
 
@@ -27,235 +29,11 @@ def make_unknown_command(name):
             "Unknown command: {}".format(name),
     )
 
+
 class REPL:
     startup_file_pattern = ".{}rc"
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
-
-    class REPLFunction:
-        # This requires further thought
-        forbidden_names = []
-
-        def __init__(self, owner, name, argspec = None):
-            self.__name = name
-            self.__owner = owner
-            self.__variadic = argspec[-1] == "..." if argspec else False
-            self.__argspec = argspec[:-1] if self.__variadic else argspec
-
-            self.__contents = []
-
-            self.args_ = None
-            self.argspec_ = None
-
-        @property
-        def name(self):
-            return self.__name
-
-        @property
-        def argspec(self):
-            return self.__argspec
-
-        def complete(self, line):
-            self.__owner.finish_block()
-
-            usagestring = \
-                    ("{} args".format(self.__name)
-                    if not self.__argspec
-                    else "{} {}".format(self.__name,
-                        " ".join(self.__argspec)))
-
-            helpstring = \
-                ("function {}\n".format(self.__name)
-                + formatter.format(self.__contents, depth = 1) + "\nendfunction"
-                if not self.__argspec else
-                "function {} {}\n".format(self.__name,
-                    " ".join(self.__argspec))
-                + formatter.format(self.__contents, depth = 1) + "\nendfunction"
-                )
-
-            self.__owner.register_user_function(command.Command(
-                self,
-                self.__name,
-                usagestring,
-                helpstring
-            ))
-
-        def append(self, line):
-            line = line.strip()
-
-            if line == "endfunction":
-                self.complete(line)
-            elif line.startswith("function"):
-                # We'd have problems with function
-                # lifetime and scope, so we can't really allow nested functions
-                sys.stderr.write("Cannot create nested functions\n")
-                self.__owner.discard_block()
-            else:
-                self.__contents.append(line)
-
-            return self
-
-        def make_bindings(self, args, argspec):
-            bindings = {
-                "FUNCTION": self.__name,
-                "#": str(len(args)),
-                "@": " ".join([syntax.quote(arg) for arg in args]),
-                "0": self.__name,
-            }
-
-            for position, argument in enumerate(args):
-                bindings[str(position + 1)] = argument
-
-            for name, argument in zip(argspec, args):
-                bindings[name] = argument
-
-            return bindings
-
-        def shift(self):
-            self.args_ = self.args_[1:]
-
-            to_unset = None
-            if len(self.args_) < len(self.argspec_):
-                to_unset = self.argspec_[0]
-                self.argspec_ = self.argspec_[1:]
-
-            bindings = self.make_bindings(self.args_, self.argspec_)
-
-            # Unset last argument
-            del self.bindings[str(len(self.args_))]
-            if to_unset:
-                del self.bindings[str(to_unset)]
-
-            # Apply shift down
-            for k, v in bindings.items():
-                self.bindings[k] = v
-
-        def calledIncorrectly(self, args):
-            if not self.__argspec: return False
-            if self.__variadic:
-                return len(args) < len(self.__argspec)
-            else:
-                return len(args) != len(self.__argspec)
-
-        def __call__(self, *args):
-            if self.calledIncorrectly(args):
-                raise common.REPLRuntimeError("Usage: {} {}"
-                        .format(self.__name, " ".join(self.__argspec)))
-
-            self.argspec_ = self.__argspec[:]
-            self.args_ = args
-
-            self.bindings = self.make_bindings(self.args_, self.argspec_)
-
-            self.__owner.add_scope(self.bindings, self.__name)
-
-            try:
-                for line in self.__contents:
-                    try:
-                        res = self.__owner.eval(line)
-                        self.__owner.stack_top().line_number += 1
-                        if res: print(res.strip("\n"))
-                    except common.REPLReturn as e:
-                        return e.value
-                    except common.REPLFunctionShift as e:
-                        self.shift()
-                        continue
-            finally:
-                self.__owner.pop_scope()
-
-    class Conditional:
-        def __init__(self, owner, condition):
-            self.__owner = owner
-            self.__name = "Conditional"
-
-            self.__condition = condition
-            self.__block = []
-
-            self.__chain = []
-            self.__else_block = []
-
-        @property
-        def name(self):
-            return self.__name
-
-        def complete(self):
-            self.__owner.complete_block()
-            for pred, blk in self.__chain:
-                self.__owner.eval(pred)
-                if str(self.__owner.get("?")) != "0":
-                    continue
-
-                for line in blk:
-                    try:
-                        res = self.__owner.eval(line)
-                    except common.REPLFunctionShift as e:
-                        self.__owner.stack_top().obj.callable.shift()
-                        continue
-                    if res: print(res.strip("\n"))
-                return
-
-        # Stupidly, it's not a syntax error to have an else clause in the middle
-        # of a conditional chain, even though it's not particularly useful to do
-        # so
-        def append(self, line):
-            line = line.strip()
-            if line.startswith("endif"):
-                self.__chain.append((self.__condition, self.__block))
-                self.complete()
-            elif line.startswith("elif"):
-                if len(line.split(" ")) == 1:
-                    sys.stderr.write("Conditional block must have predicate\n")
-                    self.__owner.discard_block()
-                    return self
-
-                self.__chain.append((self.__condition, self.__block))
-                self.__condition = line.split(" ", 1)[-1]
-                self.__block = []
-            elif line.startswith("else"):
-                self.__chain.append((self.__condition, self.__block))
-                self.__condition = "true" # Kill me
-                self.__block = []
-            else:
-                self.__block.append(line)
-            return self
-
-    class Loop:
-        def __init__(self, owner, condition):
-            self.__condition = condition
-            self.__owner = owner
-            self.__name = "Loop"
-            self.__contents = []
-
-        @property
-        def name(self):
-            return self.__name
-
-        def complete(self):
-            self.__owner.complete_block()
-
-            broken = False
-            res = self.__owner.eval(self.__condition)
-            if res: print(res.strip("\n"))
-            while str(self.__owner.get("?")) == "0" and not broken:
-                for line in self.__contents:
-                    try:
-                        res = self.__owner.eval(line)
-                        if res: print(res.strip("\n"))
-                    except common.REPLBreak as e:
-                        broken = True
-                        break
-                    except common.REPLFunctionShift as e:
-                        self.__owner.stack_top().obj.callable.shift()
-                        continue
-                self.__owner.eval(self.__condition)
-
-        def append(self, line):
-            line = line.strip()
-
-            if line.startswith("done"):
-                self.complete()
-            else:
-                self.__contents.append(line)
 
     def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
             upstream_environment = None, dotfile_prefix = None,
@@ -924,12 +702,12 @@ class REPL:
 
         name, argspec = rest[0], rest[1:]
 
-        if name in REPL.REPLFunction.forbidden_names:
+        if name in REPLFunction.forbidden_names:
             sys.stderr.write("{} is a reserved word\n".format(name))
             self.set("?", "3")
             return
 
-        self.__block_under_construction.append(self.REPLFunction(self,
+        self.__block_under_construction.append(REPLFunction(self,
             str(name), [str(spec) for spec in argspec]))
 
     def __start_loop(self, rest):
@@ -938,7 +716,7 @@ class REPL:
             self.set("?", "2")
             return
 
-        self.__block_under_construction.append(self.Loop(self,
+        self.__block_under_construction.append(Loop(self,
             syntax.ExpandableString(" ".join(
                 [str(bit) for bit in rest]
             ))))
@@ -949,7 +727,7 @@ class REPL:
             self.set("?", "3")
             return
 
-        self.__block_under_construction.append(self.Conditional(self,
+        self.__block_under_construction.append(Conditional(self,
             syntax.ExpandableString(
                 " ".join([str(bit) for bit in rest]
             ))))
