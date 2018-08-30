@@ -308,11 +308,11 @@ class REPL:
                 result = self.__keywords[str(bits[0])](bits[1:])
             finally:
                 self.set(self.__resultvar, result or 0)
-            return ""
+            return result or ""
 
         # We can't do indiscriminate expansion before invoking keyword
         # expressions, because loops would become horribly unwieldy
-        bits = [syntax.expand(bit, self.__env) for bit in bits]
+        bits = [bit for bit_ in bits for bit in syntax.expand(bit_, self.__env)]
 
         bits = self.expand_subshells(bits)
         bits = self.do_pipelines(bits)
@@ -742,7 +742,7 @@ class REPL:
             raise common.REPLSyntaxError("Cannot return an expression")
 
         [value] = value
-        value = syntax.expand(value, self.__env)
+        value = syntax.expand(value, self.__env)[0]
 
         self.set(self.__resultvar, value or 0)
         raise common.REPLReturn(str(value))
@@ -758,7 +758,7 @@ class REPL:
         if not name: return 1
 
         [name] = name
-        name = syntax.expand(name, self.__env)
+        name = syntax.expand(name, self.__env)[0]
 
         command = self.lookup_command(str(name))
 
@@ -781,8 +781,13 @@ class REPL:
         return 0
 
     def __time(self, bits):
-        bits = [str(syntax.quote(syntax.expand(bit, self.__env))) for bit
-                in bits]
+        _bits = []
+        for bit_ in bits:
+            for bit in syntax.expand(bit_, self.__env):
+                # sys.stderr.write("New bit: {}\n".format(bit))
+                _bits.append(syntax.quote(bit))
+        bits = _bits
+
         t0 = timeit.default_timer()
         res = self.eval(" ".join(bits))
         t1 = timeit.default_timer()

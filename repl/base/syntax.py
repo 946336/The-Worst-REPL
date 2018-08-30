@@ -133,12 +133,22 @@ def quote(string):
         # This has been a disaster
         return string
 
+# That's an oof from me
 def expand(string, bindings):
-    if type(string) in [ExpandableString, NonExpandableString]:
-        return string.expand(bindings)
+    _type = type(string)
+
+    if _type in [ExpandableString, NonExpandableString]:
+        # Quote to prevent splitting
+        string = _type(quote(string))
+        tokens = split_whitespace(string.expand(bindings))
+        return [ str(token) for token in tokens ]
     elif type(string) == str:
-        return ExpandableString(string).expand(bindings)
-    else: return string
+        # Temporarily wrap to expand cleanly
+        tokens = split_whitespace(ExpandableString(string).expand(bindings))
+        return [ str(token) for token in tokens ]
+    else:
+        # Give up
+        return [string]
 
 def is_string_type(s):
     t = type(s)
@@ -362,6 +372,7 @@ def split_whitespace(string):
     an expandable string, so let's clean up that loose end
     """
 
-    return [ExpandableString(token) if type(token) is not NonExpandableString
-            else token for token in tokens ]
+    return tokens
+    # return [ExpandableString(token) if type(token) is not NonExpandableString
+    #         else token for token in tokens ]
 
