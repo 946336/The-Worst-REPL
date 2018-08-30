@@ -353,6 +353,9 @@ class REPL:
                     result = self.__keywords[command](arguments)
             finally:
                 self.set(self.__resultvar, result or 0)
+                if sys.stdin is not self.__true_stdin:
+                    sys.stdin = self.__true_stdin
+
             stdout =  out.getvalue()
             out.close()
             return stdout
