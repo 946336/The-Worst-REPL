@@ -308,7 +308,7 @@ class REPL:
                 result = self.__keywords[str(bits[0])](bits[1:])
             finally:
                 self.set(self.__resultvar, result or 0)
-            return result or ""
+            return ""
 
         # We can't do indiscriminate expansion before invoking keyword
         # expressions, because loops would become horribly unwieldy
@@ -348,10 +348,11 @@ class REPL:
             if output_redirect:
                 out.join(output_redirect)
             try:
+                result = None
                 with redirect_stdout(out):
                     result = self.__keywords[command](arguments)
             finally:
-                self.set(self.__resultvar, result)
+                self.set(self.__resultvar, result or 0)
             stdout =  out.getvalue()
             out.close()
             return stdout
@@ -784,7 +785,6 @@ class REPL:
         _bits = []
         for bit_ in bits:
             for bit in syntax.expand(bit_, self.__env):
-                # sys.stderr.write("New bit: {}\n".format(bit))
                 _bits.append(syntax.quote(bit))
         bits = _bits
 
