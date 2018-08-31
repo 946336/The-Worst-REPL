@@ -2,9 +2,15 @@
 from . import formatter
 from .base import command, syntax, common
 
+import re
+
 class REPLFunction:
     # This requires further thought
     forbidden_names = []
+
+    forbidden_argspec_pattern = re.compile(
+        "^[0-9]"
+    )
 
     def __init__(self, owner, name, argspec = None):
         self.__name = name

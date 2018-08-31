@@ -706,6 +706,12 @@ class REPL:
 
         name, argspec = rest[0], rest[1:]
 
+        if any(REPLFunction.forbidden_argspec_pattern.match(arg) for arg in
+                argspec):
+            sys.stderr.write("Function arguments may not begin with numbers\n")
+            self.set(self.__resultvar, "2")
+            return
+
         if name in REPLFunction.forbidden_names:
             sys.stderr.write("{} is a reserved word\n".format(name))
             self.set("?", "3")
@@ -717,7 +723,7 @@ class REPL:
     def __start_loop(self, rest):
         if len(rest) == 0:
             sys.stderr.write("Loop must have condition\n")
-            self.set("?", "2")
+            self.set(self.__resultvar, "2")
             return
 
         self.__block_under_construction.append(Loop(self,
@@ -728,7 +734,7 @@ class REPL:
     def __start_conditional(self, rest):
         if len(rest) == 0:
             stys.stderr.write("Conditional block must have predicate\n")
-            self.set("?", "3")
+            self.set(self.__resultvar, "3")
             return
 
         self.__block_under_construction.append(Conditional(self,
