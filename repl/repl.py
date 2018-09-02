@@ -259,10 +259,10 @@ class REPL:
     def add_scope(self, initial_bindings = None, name = ""):
         self.__scope_stack.append(self.__env)
         self.__env = environment.Environment(
-                name = name,
-                upstream = self.__env,
-                initial_bindings = initial_bindings,
-                )
+            name = name,
+            upstream = self.__env,
+            initial_bindings = initial_bindings,
+        )
         return self
 
     def pop_scope(self):
@@ -270,7 +270,7 @@ class REPL:
         last = self.__scope_stack[-1]
         self.__env = last
         self.__scope_stack.pop()
-        return last
+        return self
 
     def get_scope(self, index = -1):
         return self.__env
