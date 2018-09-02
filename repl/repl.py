@@ -39,7 +39,9 @@ class REPL:
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
             modules_enabled = [], debug = False, noinit = False,
-            nodotfile = False, noenv = False):
+            nodotfile = False, noenv = False, input_source = sys.stdin,
+            output_sink = sys.stdout, error_sink = sys.stderr,
+            force_output_flush = False):
         # noinit: No builtins
         # nodotfile: Don't use dotfile
         # noenv: No environment
@@ -71,9 +73,12 @@ class REPL:
         self.__eval_hook = None
         self.__exec_hook = None
 
-        self.__input_source = sys.stdin
-        self.__output_sink = sys.stdout
-        self.__error_sink = sys.stderr
+        self.__input_source = input_source
+        self.__output_sink = output_sink
+        self.__error_sink = error_sink
+
+        self.toStdout = self.toStdoutEager if force_output_flush else \
+            self.toStdoutLazy
 
         if not noenv:
             self.__config_env = environment.Environment(self.name + "-env",
@@ -627,20 +632,29 @@ class REPL:
 
     def set_input_source(self, input_source):
         self.__input_source = input_source
+        return self
 
     def set_output_sink(self, output_sink):
         self.__output_sink = output_sink
+        return self
 
     def set_error_sink(self, error_sink):
         self.__error_sink = error_sink
+        return self
 
     def input(prompt = ""):
-        self.toStdout(prompt)
+        self.toStdoutEager(prompt)
         self.__input_source.readline()
 
-    def toStdout(self, message = "", end = "\n"):
+    def toStdoutEager(self, message = "", end = "\n"):
         self.__output_sink.write(message + end)
         self.__output_sink.flush()
+
+    def toStdoutLazy(self, message = "", end = "\n"):
+        self.__output_sink.write(message + end)
+
+    # Sometimes this choice matters
+    toStdout = toStdoutLazy
 
     def toStderr(self, message = "", end = "\n"):
         self.__error_sink.write(message + end)

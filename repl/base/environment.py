@@ -29,11 +29,11 @@ class Environment:
 
     def copy(self):
         return Environment(
-                name = self.__name,
-                upstream = self.__upstream,
-                default_value = self.__default,
-                initial_bindings = self.__bindings.copy()
-                )
+            name = self.__name,
+            upstream = self.__upstream,
+            default_value = self.__default,
+            initial_bindings = self.__bindings.copy()
+        )
 
     # Bindings search up as far as possible for something to trample, but
     # otherwise stay at this height

@@ -17,7 +17,7 @@ function rule110 input
         return 1
     endif
 
-    # We need mutability
+    # Space beyond the ends are implicitly 0
     set-local pattern 00${input}00
     set-local newpattern ""
 
@@ -27,7 +27,7 @@ function rule110 input
     set-local i 0
     while less-than $i $end
         set-local trigram-start $i
-        set-local trigram-end  `add $i 3`
+        set-local trigram-end `add $i 3`
         set-local trigram `slice $pattern $trigram-start $trigram-end `
 
         if strcmp $trigram 111
