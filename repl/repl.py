@@ -61,7 +61,6 @@ class REPL:
 
         self.__block_under_construction = []
 
-        self.__execution_depth = 1
         self.__call_stack = callstack.CallStack()
         self.__scope_stack = []
 
@@ -277,11 +276,9 @@ class REPL:
         return self.__env
 
     def __make_call(self, command):
-        self.__execution_depth += 1
         self.__call_stack.append(callstack.Entry(command))
 
     def __end_call(self):
-        self.__execution_depth -= 1
         self.__call_stack.pop()
 
     def eval(self, string):
@@ -350,7 +347,7 @@ class REPL:
             quoted = [syntax.quote(argument) for argument in arguments if
                     argument]
             self.toStderr("{} {} {}".format("+" *
-                self.__execution_depth, command, " ".join(quoted)))
+                (len(self.__call_stack) + 1), command, " ".join(quoted)))
 
         if command.strip() in self.__keywords:
             out = sink.Wiretap()

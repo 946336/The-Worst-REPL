@@ -17,6 +17,9 @@ class CallStack:
 
     __str__ = __repr__
 
+    def __len__(self):
+        return len(self.__stack)
+
     def append(self, entry):
         self.__stack.append(entry)
 
