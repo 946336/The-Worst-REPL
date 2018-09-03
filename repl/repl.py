@@ -272,9 +272,6 @@ class REPL:
         self.__scope_stack.pop()
         return self
 
-    def get_scope(self, index = -1):
-        return self.__env
-
     def __make_call(self, command):
         self.__call_stack.append(callstack.Entry(command))
 
