@@ -77,7 +77,8 @@ if __name__ == "__main__":
 
     r = repl.REPL(application_name = name, modules_enabled = ["readline"],
             dotfile_prefix = "wrap", nodotfile = True,
-            noinit = True).set_unknown_command(make_do_command)
+            noinit = True, noenv = True,
+            nokeyword = True).set_unknown_command(make_do_command)
 
     r.go()
 
