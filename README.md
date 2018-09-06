@@ -13,11 +13,11 @@ an interactive console than anything else.
 
 ## Requirements
 
-REPL is being developed and tested on Python 3.5.
+REPL is being developed and tested on Linux/Python 3.5.
 
 ## Example
 
-We provide sample applications built with REPL, located in `example`. Try
+We provide sample applications built with REPL, located in `example/`. Try
 them out!
 
 ## What REPL _can_ do

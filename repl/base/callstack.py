@@ -1,11 +1,11 @@
 
 class Entry:
-    def __init__(self, obj, line_number = 0):
+    def __init__(self, obj, line_number = 1):
         self.obj = obj
         self.line_number = line_number
 
     def __repr__(self):
-        return "{}:{}".format(self.obj.name, self.line_number)
+        return "In {}, line {}".format(self.obj.name, self.line_number)
 
 class CallStack:
     def __init__(self, initial = None):

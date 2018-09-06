@@ -17,10 +17,13 @@ Most of REPL boils down to the following:
     command [arguments...]
     # This is a comment
 
-REPL provides the following shell-like behavior:
+Note that the backslash _is not_ used to escape special characters in REPL.
+Instead, special characters must be quoted to suppress their normal behavior.
 
-The backslash _is not_ used to escape special characters in REPL. Instead,
-special characters must be quoted to suppress their normal behavior.
+## Default Offerings
+
+The rest of this page is devoted to explaining what a reasonably uncustomized
+`REPL` instance provides to the end user.
 
 #### Variables
 
@@ -81,7 +84,7 @@ REPL can read a file and run its contents in the current session.
 #### Help
 
 Among other things, REPL has a framework for attaching documentation to
-commands.
+commands. The `help` command taps into that.
 
     (test) >>> help echo
     Usage: echo [ args ]
@@ -162,6 +165,12 @@ depends on the name given to the REPL, but the filename can be overridden. For
 example, if the REPL is given the name "test", the file `.testrc` will be used
 as the dotfile. Dotfiles are sourced before control is returned to the user.
 
+Note that the `REPL` constructor takes an optional parameter `dotfile_root`,
+which controls where `REPL` will look for its dotfiles.
+
+Dotfiles are sourced at startup (unless this behavior is suppressed by the
+application), and are useful for doing setup work.
+
 ## Builtins
 
 REPL provides the following builtins by default:
@@ -198,6 +207,36 @@ stop the REPL.
 REPL's `cat` is not useful, and is strictly less powerful than POSIX `cat`.
 REPL `cat` will _only_ copy standard input to standard output, and does not
 take any arguments.
+
+## Keywords
+
+REPL recognizes a few keywords, which take precedence over any other command.
+These can be disabled by passing `True` to the `REPL` constructor for the
+keyword argument `nokeyword`.
+
+    break
+    function
+    help
+    if
+    quit
+    return
+    shift
+    time
+    while
+
+`function`, `if`, and `while` are described below.
+
+* `break`: Stops the execution of a loop, jumping to the command immediately
+  following the end of the loop body.
+* `help`: This is a near exact clone of the `help` command that is provided by
+  default.
+* `quit`: The `done` command is an alias for this keyword. `quit` sets the
+  `REPL.done` flag.
+* `return` Causes the execution of a function to stop, and sets `$?` to its
+  first argument
+* `shift`: Shift all function arguments forward by one. Named parameters are
+  unset from first to last.
+* `time`: Time the execution of a command.
 
 ## Modules
 
@@ -315,9 +354,11 @@ commands in a debug session.
     (test) >>> c
     DEBUG >>> stack
     Traceback (Most recent call last):
-    c:0
-    b:0
-    a:0
+    c:1
+    b:1
+    a:1
+
+There is currently no way to customize the debugging prompt.
 
 ## Timing
 

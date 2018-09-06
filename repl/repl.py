@@ -39,7 +39,8 @@ class REPL:
             upstream_environment = None, dotfile_prefix = None,
             dotfile_root = None, history_length = 1000, echo = False,
             modules_enabled = [], debug = False, noinit = False,
-            nodotfile = False, noenv = False, input_source = sys.stdin,
+            nodotfile = False, noenv = False, nokeyword = False,
+            input_source = sys.stdin,
             output_sink = sys.stdout, error_sink = sys.stderr,
             force_output_flush = False):
         # noinit: No builtins
@@ -92,19 +93,21 @@ class REPL:
         self.set(self.__resultvar, "0")
         self.set("0", self.__name)
 
-        self.__keywords = {
-            "function": self.__start_function,
-            "while": self.__start_loop,
-            "if": self.__start_conditional,
-            "break": self.__break,
-            "return": self.__return,
-            "quit": self.__stop,
-            # Help should always be available, but the command version can
-            # be tweaked by the user
-            "help": self.__get_command_help,
-            "time": self.__time,
-            "shift": self.__shift,
-        }
+        self.__keywords = {}
+        if not nokeyword:
+            self.__keywords = {
+                "function": self.__start_function,
+                "while": self.__start_loop,
+                "if": self.__start_conditional,
+                "break": self.__break,
+                "return": self.__return,
+                "quit": self.__stop,
+                # Help should always be available, but the command version can
+                # be tweaked by the user
+                "help": self.__get_command_help,
+                "time": self.__time,
+                "shift": self.__shift,
+            }
 
         # REPL builtins
         self.__builtins = {
