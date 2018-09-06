@@ -1,7 +1,7 @@
 
 echo Rule110 simulator:
-echo \t* Use the rule110 command to run one generation of a pattern.
-echo \t* Use the do-rule110 command to run n generations of a pattern.
+echo \t* Use the rule110 function to run one generation of a pattern.
+echo \t* Use the do-rule110 function to run n generations of a pattern.
 echo \t* Use the help command for more details.
 echo
 

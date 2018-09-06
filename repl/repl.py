@@ -29,23 +29,29 @@ def make_unknown_command(name):
             "Unknown command: {}".format(name),
     )
 
-
 class REPL:
     startup_file_pattern = ".{}rc"
     history_file_pattern = ".{}_history"
     configs_file_pattern = ".{}_vars"
 
-    def __init__(self, application_name = "repl", prompt = lambda self: ">>> ",
-            upstream_environment = None, dotfile_prefix = None,
-            dotfile_root = None, history_length = 1000, echo = False,
-            modules_enabled = [], debug = False, noinit = False,
-            nodotfile = False, noenv = False, nokeyword = False,
+    def __init__(self,
+            application_name = "repl",
+            upstream_environment = None,
+            dotfile_prefix = None,
+            dotfile_root = None,
+            history_length = 1000,
+            echo = False,
+            modules_enabled = [],
+            debug = False,
+            noinit = False,    # Don't register builtins
+            nodotfile = False, # Don't source dotfiles
+            noenv = False,     # Don't use external variable store
+            nokeyword = False, # Disable REPL keywords
             input_source = sys.stdin,
-            output_sink = sys.stdout, error_sink = sys.stderr,
-            force_output_flush = False):
-        # noinit: No builtins
-        # nodotfile: Don't use dotfile
-        # noenv: No environment
+            output_sink = sys.stdout,
+            error_sink = sys.stderr,
+            force_output_flush = False
+        ):
 
         self.__name = application_name
         self.__echo = echo
@@ -80,6 +86,7 @@ class REPL:
         self.toStdout = self.toStdoutEager if force_output_flush else \
             self.toStdoutLazy
 
+        self.__config_env = None
         if not noenv:
             self.__config_env = environment.Environment(self.name + "-env",
                     upstream = upstream_environment, default_value = "")
@@ -981,6 +988,10 @@ class REPL:
     def make_config_command(self):
 
         def config(subcommand, *args):
+            if not self.__config_env:
+                print("Config environment disabled.")
+                return 3
+
             if subcommand == "set":
                 if len(args) != 2:
                     self.toStderr("Subcommand set expected name and value")

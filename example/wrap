@@ -56,13 +56,14 @@ def make_do_command(name):
 def usage():
     import textwrap
     print(textwrap.dedent("""
-        Usage: {} PROGRAM ...
+        Usage: {} PROGRAM ARGUMENTS...
 
         Run a noninteractive CLI application wrapped in an interactive CLI
         application.
 
-        If PROGRAM ... contains any '%s', they are replaced with pieces of
-        commands entered at the prompt.
+        If and of PROGRAM ARGUMENTS... contain '%s', they are replaced with
+        pieces of commands entered at the prompt. Any remaining pieces are
+        appended to the final command.
         """.format(sys.argv[0])).strip("\n"))
 
 if __name__ == "__main__":

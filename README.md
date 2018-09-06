@@ -15,10 +15,19 @@ an interactive console than anything else.
 
 REPL is being developed and tested on Linux/Python 3.5.
 
-## Example
+## Examples
 
-We provide sample applications built with REPL, located in `example/`. Try
-them out!
+We provide sample applications built with REPL, located in `example/`.
+
+#### wrap
+
+Wrap a noninteractive CLI program (such as git) in an interactive session.
+
+#### rule110.py
+
+An implementation of [Rule 110](https://en.wikipedia.org/wiki/Rule_110),
+demonstrating that REPL is Turing complete when its builtins and modules are
+enabled.
 
 ## What REPL _can_ do
 
