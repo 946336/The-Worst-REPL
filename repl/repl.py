@@ -599,7 +599,8 @@ class REPL:
         try:
             while not self.done:
                 try:
-                    self.toStdout(self.eval(input(self.prompt).strip("\n")), end = "")
+                    self.toStdout(self.eval(input(self.prompt).strip("\n")),
+                            end = "")
                 except TypeError as e:
                     self.toStderr("TypeError: " + str(e) + "")
                     if self.__debug: raise e
@@ -620,7 +621,7 @@ class REPL:
         except Exception as e: # Really?
             if self.__debug: raise e
             else:
-                self.toStderr("{}: {}.format"(str(type(e)), str(e)))
+                self.toStderr("{}: {}".format(str(type(e)), str(e)))
                 return self.go()
 
         return self
@@ -1221,11 +1222,11 @@ class REPL:
             state = args[0]
 
             if state.lower() == "on":
-                self.__exceptions = True
+                self.__debug = True
             elif state.lower() == "off":
-                self.__exceptions = False
+                self.__debug = False
             elif state.lower() == "toggle":
-                self.__exceptions = not self.__exceptions
+                self.__debug = not self.__exceptions
             else:
                 self.toStderr("Subcommand must be one of: on, off, toggle")
 
