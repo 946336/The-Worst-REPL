@@ -50,6 +50,19 @@ class Command:
     def set_help(self, helptext):
         self.__helptext = helptext
 
+# UNTESTED
+class WrapperCommand(Command):
+    def __init__(self, function, name = "", usage = "", helptext = ""):
+        def default_wrapper(*args):
+            try:
+                result = function(*args)
+            except Exception:
+                return 1
+            else:
+                print(result)
+                return 0
+        super().__init__(default_wrapper, name, usage, helptext)
+
 def helpfmt(*text):
     formatted = []
     for item in text:

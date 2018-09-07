@@ -2,14 +2,9 @@
 
 The worst REPL you've ever seen.
 
-REPL is a simple framework for building simple interactive applications.
-
-REPL provides a simple way to bind textual commands to python functions. If
-you need an interactive, shell-like interface, this might work for you.
-
-This is not an out-of-the-box solution, and it is certainly not intended to
-replace a full domain-specific language. In its current state, REPL is more of
-an interactive console than anything else.
+REPL binds textual commands to python functions and is, at its core, meant to
+serve as a scripting language. If you need such an interactive, shell-like
+interface, this might work for you.
 
 ## Requirements
 
@@ -17,7 +12,7 @@ REPL is being developed and tested on Linux/Python 3.5.
 
 ## Examples
 
-We provide sample applications built with REPL, located in `example/`.
+We provide sample programs built with REPL, located in `example/`.
 
 #### wrap
 
@@ -31,11 +26,11 @@ enabled.
 
 ## What REPL _can_ do
 
-* Provide a simple way or users to interact with your application.
+* Provide a simple way or users to interact with your prorgram.
 * Allow users to invoke your functions without being required to read your
   source code or write their own.
 * Give you flexibility in spot-checking and testing code, especially if you're
-  testing a backend application with no proper user interface.
+  testing a backend program with no proper user interface.
 
 ## What REPL _cannot_ do
 
