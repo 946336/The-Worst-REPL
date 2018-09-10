@@ -15,7 +15,6 @@ function fib depth
 
 endfunction
 
-# Wow, this is a lot faster than the naive recursive version.
 # This has linear complexity.
 function ifib depth
     if less-than $depth 2
@@ -57,7 +56,7 @@ function sfib fst snd depth
     echo `sfib $snd $next $newdepth`
 endfunction
 
-# Recursive fibonacci, but using function locals
+# Recursive fibonacci, but using more function locals
 # This has exponential complexity.
 function lfib depth
     if less-than $depth 2
@@ -68,7 +67,6 @@ function lfib depth
     set-local fstdepth `subtract $depth 1`
     set-local snddepth `subtract $depth 2`
 
-    # Recursive calls do weird things to the parent call's local environment
     set-local fst `lfib $fstdepth`
     set-local snd `lfib $snddepth`
 
