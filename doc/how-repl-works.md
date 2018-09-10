@@ -88,5 +88,5 @@ settings up for and cleaning up after these functions.
 * `Function`
 * `Loop`
 * `Conditional`
-* REPL keywords (`REPL.keywords`)
+* REPL keywords (`keywords`)
 
