@@ -1,0 +1,130 @@
+# Naive fibonacci
+# This has exponential complexity: Each invocation causes two more.
+function fib depth
+    # Base case for the standard fibonacci sequence: 1, 1, ...
+    if less-than $depth 2
+        echo 1
+        return
+    endif
+
+    # Recursive case: depth is at least 2
+    set-local fstdepth `subtract $depth 1`
+    set-local snddepth `subtract $depth 2`
+
+    add `fib $fstdepth` `fib $snddepth`
+
+endfunction
+
+# Wow, this is a lot faster than the naive recursive version.
+# This has linear complexity.
+function ifib depth
+    if less-than $depth 2
+        echo 1
+        return
+    endif
+
+    set-local fst 1
+    set-local snd 1
+
+    set-local i 0
+    while less-than $i $depth
+        set-local tmp $snd
+        set-local snd `add $fst $snd`
+        set-local fst $tmp
+        set-local i `add $i 1`
+    done
+
+    echo $fst
+endfunction
+
+# Single track fibonacci implementation. This is roughly equivalent to the
+# iterative version, but incurs additional function call overhead, which far
+# outstrips the loop overhead as depth increases.
+# This has linear complexity.
+function sfib fst snd depth
+
+    if equal 0 $depth
+        echo $fst
+        return
+    elif equal 1 $depth
+        echo $snd
+        return
+    endif
+
+    set-local next `add $fst $snd`
+    set-local newdepth `subtract $depth 1`
+
+    echo `sfib $snd $next $newdepth`
+endfunction
+
+# Recursive fibonacci, but using function locals
+# This has exponential complexity.
+function lfib depth
+    if less-than $depth 2
+        echo 1
+        return
+    endif
+
+    set-local fstdepth `subtract $depth 1`
+    set-local snddepth `subtract $depth 2`
+
+    # Recursive calls do weird things to the parent call's local environment
+    set-local fst `lfib $fstdepth`
+    set-local snd `lfib $snddepth`
+
+    add $fst $snd
+endfunction
+
+# Man, this REPL is slow as balls
+set fibtest 10
+echo Calculating the ${fibtest}th fibonacci number:
+echo Recursive fib: `time fib  $fibtest`
+echo Recursive fib with more local variables: `time lfib $fibtest`
+echo Single-track fib: `time sfib 1 1 $fibtest`
+echo Iterative fib: `time ifib $fibtest`
+
+echo =============================================
+
+function factorial n
+    if less-than $n 1
+        echo 1
+        return 0
+    endif
+
+    set-local next `decrement $n`
+    set-local rest `factorial $next`
+
+    echo `multiply $n $rest`
+
+endfunction
+
+function ifactorial n
+
+    if less-than $n 1
+        echo 1
+        return 0
+    endif
+
+    set-local i $n
+    set-local result 1
+    while greater-than $i 0
+        set-local result `multiply $result $i`
+        set-local i `decrement $i`
+    done
+
+    echo $result
+
+endfunction
+
+echo Testing recursive factorial
+time factorial 5
+time factorial 10
+time factorial 20
+
+echo Testing iterative factorial
+time ifactorial 5
+time ifactorial 10
+time ifactorial 20
+
+echo =============================================
+

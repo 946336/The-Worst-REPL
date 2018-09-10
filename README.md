@@ -24,6 +24,17 @@ An implementation of [Rule 110](https://en.wikipedia.org/wiki/Rule_110),
 demonstrating that REPL is Turing complete when its builtins and modules are
 enabled.
 
+#### webpage-links
+
+An absolutely terrible way to browse the web. Point it at a URL, and it can
+extract links from the HTML. You can then point it at those URLs and repeat.
+
+#### bad-math
+
+Recursive and iterative functions for calculating Fibonacci numbers and
+factorials. These are functions written and defined in REPL, not in the
+underlying Python.
+
 ## What REPL _can_ do
 
 * Provide a simple way or users to interact with your prorgram.
