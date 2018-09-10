@@ -647,9 +647,9 @@ class REPL:
         self.__error_sink = error_sink
         return self
 
-    def input(prompt = ""):
-        self.toStdoutEager(prompt)
-        self.__input_source.readline()
+    def input(self, prompt = ""):
+        self.toStdoutEager(prompt, end = "")
+        return self.__input_source.readline()
 
     def toStdoutEager(self, message = "", end = "\n"):
         self.__output_sink.write(message + end)
