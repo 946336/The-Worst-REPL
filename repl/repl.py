@@ -614,8 +614,8 @@ class REPL:
         try:
             while not self.done:
                 try:
-                    self.toStdout(self.eval(input(self.prompt).strip("\n")),
-                            end = "")
+                    self.toStdout(self.eval(self.input(self.prompt)
+                        .strip("\n")), end = "")
                 except TypeError as e:
                     self.toStderr("TypeError: " + str(e) + "")
                     if self.__debug: raise e
