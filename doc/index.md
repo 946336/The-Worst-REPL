@@ -206,7 +206,8 @@ stop the REPL.
 
 REPL's `cat` is not useful, and is strictly less powerful than POSIX `cat`.
 REPL `cat` will _only_ copy standard input to standard output, and does not
-take any arguments.
+take any arguments. Furthermore, `cat` will produce no output until end of input
+is signalled.
 
 ## Keywords
 

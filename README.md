@@ -42,6 +42,7 @@ underlying Python.
   source code or write their own.
 * Give you flexibility in spot-checking and testing code, especially if you're
   testing a backend program with no proper user interface.
+* Disable unneeded feature families.
 
 ## What REPL _cannot_ do
 

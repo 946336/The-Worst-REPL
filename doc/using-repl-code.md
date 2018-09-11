@@ -6,6 +6,11 @@
 
 -----------------------------
 
+## Where to start
+
+You absolutely want to start by looking at the parameters that REPL's
+constructor takes. A significant portion of REPL's configuration happens there.
+
 ## Writing Python functions for REPL
 
 Functions written for use with REPL should behave somewhat like functions in a
