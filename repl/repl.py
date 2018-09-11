@@ -145,6 +145,7 @@ class REPL:
                 "math": self.__enable_math,
                 "debug": self.__enable_debugging,
                 "text": self.__enable_text,
+                "json": self.__enable_json,
         }
         self.__modules_loaded = []
 
@@ -772,6 +773,16 @@ class REPL:
                     "your installation")
             return
         for command in text.commands():
+            self.__add_builtin(command)
+
+    def __enable_json(self):
+        try:
+            from .base.modules import json as _json
+        except ImportError as e:
+            self.toStderr("Failed to import json module. Please check " +
+                    "your installation")
+            return
+        for command in _json.commands():
             self.__add_builtin(command)
 
 # ========================================================================

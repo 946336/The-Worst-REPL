@@ -64,8 +64,6 @@ class WrapperCommand(Command):
         super().__init__(default_wrapper, name, usage, helptext)
 
 def helpfmt(*text):
-    formatted = []
-    for item in text:
-        formatted.append(textwrap.dedent(item).strip("\n"))
+    formatted = [textwrap.dedent(item).strip("\n") for item in text]
     return formatted if len(formatted) != 1 else formatted[0]
 
