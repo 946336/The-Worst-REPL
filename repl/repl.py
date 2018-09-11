@@ -497,9 +497,24 @@ class REPL:
             if not quiet:
                 self.toStderr("source: File not found ({})"
                         .format(filename))
-            self.__source_depth -= 1
             return 1
-        self.__source_depth -= 1
+        except TypeError as e:
+            self.toStderr("TypeError: " + str(e) + "")
+            if self.__debug: raise e
+        except RecursionError as e:
+            self.toStderr("Maximum recursion depth exceeded")
+            if self.__debug: raise e
+        except common.REPLBreak as e:
+            self.toStderr("Cannot break when not executing a loop")
+        except common.REPLReturn as e:
+            self.toStderr("Cannot return from outside of function")
+        except common.REPLFunctionShift as e:
+            self.toStderr("Cannot shift from outside of function")
+        except common.REPLError as e:
+            self.toStderr("{}".format(str(e)))
+        finally:
+            self.__source_depth -= 1
+
         return 0
 
     @property
