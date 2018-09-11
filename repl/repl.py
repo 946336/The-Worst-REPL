@@ -79,7 +79,8 @@ class REPL:
         self.__eval_hook = None
         self.__exec_hook = None
 
-        self.__input_source = input_source
+        self.__input_source = (input_source if not "readline"
+                in modules_enabled else sys.stdin)
         self.__output_sink = output_sink
         self.__error_sink = error_sink
 
@@ -653,6 +654,10 @@ class REPL:
 #   IOBase interface, but I haven't checked
 
     def set_input_source(self, input_source):
+        if "readline" in self.__modules_loaded:
+            self.toStderr("Cannot set input source when module 'readline' is "
+                    "enabled\n")
+            return
         self.__input_source = input_source
         return self
 
@@ -665,10 +670,13 @@ class REPL:
         return self
 
     def input(self, prompt = ""):
-        self.toStdoutEager(prompt, end = "")
-        ret = self.__input_source.readline()
-        if ret: return ret
-        else: raise EOFError()
+        if "readline" in self.__modules_loaded:
+            return input(prompt)
+        else:
+            self.toStdoutEager(prompt, end = "")
+            ret = self.__input_source.readline()
+            if ret: return ret
+            else: raise EOFError()
 
     def toStdoutEager(self, message = "", end = "\n"):
         self.__output_sink.write(message + end)
