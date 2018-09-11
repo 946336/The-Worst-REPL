@@ -50,7 +50,7 @@ class REPL:
             input_source = sys.stdin,
             output_sink = sys.stdout,
             error_sink = sys.stderr,
-            force_output_flush = False
+            force_output_flush = True
         ):
 
         self.__name = application_name
@@ -649,7 +649,9 @@ class REPL:
 
     def input(self, prompt = ""):
         self.toStdoutEager(prompt, end = "")
-        return self.__input_source.readline()
+        ret = self.__input_source.readline()
+        if ret: return ret
+        else: raise EOFError()
 
     def toStdoutEager(self, message = "", end = "\n"):
         self.__output_sink.write(message + end)
@@ -975,7 +977,7 @@ class REPL:
         def cat():
             try:
                 while True:
-                    print(input())
+                    print(self.input())
             except EOFError:
                 return 0
 
@@ -1353,7 +1355,7 @@ class REPL:
             while True:
                 self.toStderr("DEBUG >>> ", end = "")
                 try:
-                    cmd = input().strip()
+                    cmd = self.input().strip()
                 except EOFError as e:
                     self.toStderr()
                     sys.stdin = self.__true_stdin
