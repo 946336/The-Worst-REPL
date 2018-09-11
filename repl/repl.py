@@ -362,12 +362,12 @@ class REPL:
                 out.join(output_redirect)
             try:
                 result = None
+                sys.stdin = self.__input_source
                 with redirect_stdout(out):
                     result = self.__keywords[command](arguments)
             finally:
                 self.set(self.__resultvar, result or 0)
-                if sys.stdin is not self.__true_stdin:
-                    sys.stdin = self.__true_stdin
+                sys.stdin = self.__true_stdin
 
             stdout =  out.getvalue()
             out.close()
@@ -385,6 +385,7 @@ class REPL:
 
         try:
             with redirect_stdout(out):
+                sys.stdin = self.__input_source
                 result = command(*arguments)
                 self.set(self.__resultvar, result or 0)
         except TypeError as e:
@@ -392,6 +393,7 @@ class REPL:
             if self.__debug: raise e
             self.set(self.__resultvar, 255)
         finally:
+            sys.stdin = self.__true_stdin
             self.__end_call()
 
         stdout = out.getvalue()
@@ -992,7 +994,7 @@ class REPL:
         def cat():
             try:
                 while True:
-                    print(self.input())
+                    print(input())
             except EOFError:
                 return 0
 
@@ -1370,10 +1372,9 @@ class REPL:
             while True:
                 self.toStderr("DEBUG >>> ", end = "")
                 try:
-                    cmd = self.input().strip()
+                    cmd = input().strip()
                 except EOFError as e:
                     self.toStderr()
-                    sys.stdin = self.__true_stdin
                     break
 
                 # using `debug` as an exit keyword is necessary to prevent
